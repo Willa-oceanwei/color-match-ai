@@ -1,0 +1,3 @@
+ID,Material,ImagePath,FormulaID,FormulaMode,RecipeStatus,EmbeddingStatus,Customer,ColorName,Pantone,CreateDate,LastUpdate,Remark
+ABS_27706,ABS,ABS/ABS_27706.jpg,27706,EXISTING,OFFICIAL,N,ABC,牙白,11-0601,2026/06/23,2026/06/23 15:25,正式配方範例
+ABS_TRIAL_20260623_152500,ABS,ABS/ABS_TRIAL_20260623_152500.jpg,,MANUAL,TRIAL,N,Trial客戶,淺灰,,2026/06/23,2026/06/23 15:25,未正式化試樣

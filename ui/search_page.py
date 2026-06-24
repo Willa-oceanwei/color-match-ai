@@ -8,13 +8,9 @@ from services.search_service import search_top_k
 def render_search_page():
 
     st.markdown(
-    "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>相近色板搜尋</h2>", 
-    unsafe_allow_html=True
+        "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>相近色板搜尋</h2>",
+        unsafe_allow_html=True
     )
-
-    # =====================
-    # INPUT
-    # =====================
 
     material = st.selectbox(
         "Material",
@@ -30,32 +26,46 @@ def render_search_page():
         st.image(uploaded, caption="Query Sample")
 
     # =====================
-    # SEARCH BUTTON
+    # BUTTON
     # =====================
-
     if st.button("🔍 Start Matching", disabled=uploaded is None):
 
+        st.write("🟢 BUTTON TRIGGERED")  # ✅ 一定要看到
+
         try:
-            # Step 1: save temp image
             tmp_path = Path("tmp/query.jpg")
             tmp_path.parent.mkdir(parents=True, exist_ok=True)
             tmp_path.write_bytes(uploaded.getvalue())
 
-            # Step 2: search
-            with st.spinner("AI Matching..."):
+            st.write("📦 image saved")
 
-                results = search_top_k(material, tmp_path, top_k=5)
-                st.write("DEBUG results:", results)
+            results = search_top_k(material, tmp_path, top_k=5)
 
-            # Step 3: render
-            if not results:
-                st.warning("No data found")
+            # 🔥 強制顯示 results（關鍵）
+            st.write("📊 RAW RESULTS:", results)
 
-            else:
-                for i, r in enumerate(results, 1):
+            # =====================
+            # NO DATA
+            # =====================
+            if results is None:
+                st.error("❌ results = None（search crash）")
+                return
+
+            if len(results) == 0:
+                st.warning("⚠️ 沒有搜尋結果（results = []）")
+                return
+
+            # =====================
+            # RENDER
+            # =====================
+            st.success(f"找到 {len(results)} 筆結果")
+
+            for i, r in enumerate(results, 1):
+                try:
                     render_result_card(i, r)
+                except Exception as e:
+                    st.error(f"render card error: {e}")
+                    st.write(r)
 
         except Exception as e:
-            st.error(f"Search error: {e}")
-
-
+            st.error(f"SEARCH ERROR: {e}")

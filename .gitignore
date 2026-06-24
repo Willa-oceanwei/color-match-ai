@@ -1,10 +1,17 @@
 .env
+
+credentials/
+*.json
+
 __pycache__/
 .pytest_cache/
 *.pyc
+
 tmp/
+
 data/drive/**/*.jpg
 data/drive/**/*.jpeg
 data/drive/**/*.png
+
 data/vectors/*.pkl
 !data/vectors/.gitkeep

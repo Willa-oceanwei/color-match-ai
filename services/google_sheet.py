@@ -23,6 +23,7 @@ def _read_csv(path: Path, columns: list[str]) -> list[dict]:
 def _write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
     print("🔥 WRITE CSV PATH =", path.resolve())
     print("🔥 ROW COUNT =", len(rows))
+    print("🔥 CSV PATH =", SETTINGS.colorboard_csv_path.resolve())
 
     path.parent.mkdir(parents=True, exist_ok=True)
 

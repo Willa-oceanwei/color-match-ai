@@ -160,6 +160,8 @@ def render_upload_page():
 🖼 Path：{image_path}
 
 📝 FormulaMode：{resolution.formula_mode}
+
+st.write("📝 樣品占 60~80%；灰底占 20~40%；512*512", results)
 """
     )
 

@@ -59,7 +59,7 @@ def render_upload_page() -> None:
     extension = Path(uploaded.name).suffix if uploaded else ".jpg"
 
     # 固定檔名規則：Material_FormulaID.jpg
-    image_filename = f"{material}_{board_id}{extension}"
+    image_filename = f"{board_id}{extension}"
     image_path = build_image_path(material, image_filename, extension)
 
     resolution = resolve_formula_mode(formula_id)

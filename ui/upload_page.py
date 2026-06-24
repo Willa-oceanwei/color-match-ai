@@ -1,21 +1,25 @@
 import streamlit as st
-import os
 from pathlib import Path
 from datetime import datetime
 from PIL import Image
+
+import os
 
 from config import SETTINGS
 
 from services.embedding_service import embed_image, upsert_embedding
 from services.formula_service import resolve_formula_mode
+
 from services.google_drive import (
     write_uploaded_bytes,
     resolve_local_image_path
 )
+
 from services.google_sheet import (
     append_colorboard_row,
     update_embedding_status
 )
+
 from services.id_utils import (
     build_board_id,
     build_image_path,
@@ -33,7 +37,6 @@ def render_upload_page():
     # =========================
     # Material
     # =========================
-
     material = st.selectbox(
         "Material（原料）",
         ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
@@ -51,7 +54,7 @@ def render_upload_page():
     )
 
     recipe_status_label = st.selectbox(
-        "RecipeStatus（配方狀態）",
+        "RecipeStatus",
         [
             "OFFICIAL - 已正式量產",
             "REFERENCE - 有配方但未正式管理",
@@ -64,17 +67,16 @@ def render_upload_page():
     recipe_status = recipe_status_label.split(" - ")[0]
 
     # =========================
-    # DEBUG（放在 function 裡）
+    # DEBUG
     # =========================
-
     st.write("CWD =", os.getcwd())
-    st.write("CSV =", SETTINGS.colorboard_csv_path)
-    st.write("CSV exists =", Path(SETTINGS.colorboard_csv_path).exists())
+    st.write("CSV Path =", SETTINGS.colorboard_csv_path)
+    st.write("CSV Exists =", Path(SETTINGS.colorboard_csv_path).exists())
+    st.write("Vector Dir =", SETTINGS.vector_dir)
 
     # =========================
-    # 圖片預覽
+    # Preview
     # =========================
-
     if uploaded:
         st.image(
             Image.open(uploaded),
@@ -85,7 +87,6 @@ def render_upload_page():
     # =========================
     # ID
     # =========================
-
     board_id = build_board_id(material, formula_id or None)
 
     extension = Path(uploaded.name).suffix if uploaded else ".jpg"
@@ -98,8 +99,6 @@ def render_upload_page():
         extension
     )
 
-    # 👉 之後你的 upload / append / vector pipeline 在這裡接
-
     st.info(
         f"""
 📌 ID：{board_id}
@@ -108,162 +107,92 @@ def render_upload_page():
 
 🖼 Path：{image_path}
 
-📝 FormulaMode：{resolution.formula_mode}
-
 """
     )
 
     st.info("""
-    📷 色板拍攝建議
+📷 色板拍攝建議
 
-    • 尺寸：512 × 512 px
-    • 格式：JPG
-    • 檔案大小：50 ~ 150 KB
-    • 光源：固定 D65
-    • 背景：固定灰底
-    • 樣品約占畫面 70%
-    """)
+• 尺寸：512 × 512 px
+• 格式：JPG
+• 光源：D65
+• 背景：灰底
+• 樣品占比 70%
+""")
 
     # =========================
-    # 儲存
+    # Upload Button
     # =========================
+    if st.button("🚀 儲存並建立向量", type="primary", disabled=uploaded is None):
 
-    if st.button(
-            "🚀 儲存並建立向量",
-            type="primary",
-            disabled=uploaded is None):
+        if not uploaded:
+            st.warning("請先上傳圖片")
+            return
 
-        now = datetime.now().strftime(
-            "%Y/%m/%d %H:%M"
-        )
-
-        create_date = datetime.now().strftime(
-            "%Y/%m/%d"
-        )
+        now = datetime.now().strftime("%Y/%m/%d %H:%M")
+        create_date = datetime.now().strftime("%Y/%m/%d")
 
         try:
 
-            # Step1
+            # =====================
+            # Step 1: Save Image
+            # =====================
+            st.info("📦 Step 1/3 儲存圖片...")
 
-            st.info(
-                "📦 Step 1/3 儲存圖片..."
-            )
+            uploaded_bytes = uploaded.read()
 
             write_uploaded_bytes(
-                uploaded.getvalue(),
+                uploaded_bytes,
                 image_path
             )
 
-            # Step2
+            # =====================
+            # Step 2: CSV
+            # =====================
+            st.info("🧾 Step 2/3 寫入 ColorBoard...")
 
-            st.info(
-                "🧾 Step 2/3 寫入 ColorBoard..."
-            )
+            formula_mode = resolve_formula_mode(formula_id)
 
             row = {
-
                 "ID": board_id,
-
-                "FormulaID":
-                formula_id.strip(),
-
-                "Material":
-                normalize_material(material),
-
-                "ImagePath":
-                image_path,
-
-                "FormulaMode":
-                resolution.formula_mode,
-
-                "RecipeStatus":
-                recipe_status,
-
-                "EmbeddingStatus":
-                "PROCESSING",
-
-                "Customer":
-                customer,
-
-                "ColorName":
-                color_name,
-
-                "Pantone":
-                pantone,
-
-                "CreateDate":
-                create_date,
-
-                "LastUpdate":
-                now,
-
-                "Remark":
-                remark
+                "FormulaID": formula_id.strip(),
+                "Material": normalize_material(material),
+                "ImagePath": image_path,
+                "FormulaMode": formula_mode,
+                "RecipeStatus": recipe_status,
+                "EmbeddingStatus": "PROCESSING",
+                "Customer": customer,
+                "ColorName": color_name,
+                "Pantone": pantone,
+                "CreateDate": create_date,
+                "LastUpdate": now,
+                "Remark": remark
             }
 
             append_colorboard_row(row)
 
-            import os
-            from pathlib import Path
+            st.write("DEBUG CSV =", SETTINGS.colorboard_csv_path)
+            st.write("DEBUG ROW =", row)
 
-            st.write("Current Folder =", os.getcwd())
+            # =====================
+            # Step 3: Embedding
+            # =====================
+            st.info("🧠 Step 3/3 建立向量...")
 
-            st.write("ColorBoard Path =", SETTINGS.colorboard_csv_path)
-            st.write(
-                "CSV Exists =",
-                Path(SETTINGS.colorboard_csv_path).exists()
-            )
+            local_path = resolve_local_image_path(image_path)
 
-            st.write("Vector Path =", SETTINGS.vector_dir)
-            st.write(
-                "Vector Folder Exists =",
-                Path(SETTINGS.vector_dir).exists()
-            )
-
-            if Path(SETTINGS.vector_dir).exists():
-                st.write(
-                    "Vector Files =",
-                    os.listdir(SETTINGS.vector_dir)
-                )
-
-            # Step3
-
-            st.info(
-                "🧠 Step 3/3 建立向量..."
-            )
-
-            local_path = resolve_local_image_path(
-                image_path
-            )
-
-            embedding = embed_image(
-                local_path
-            )
+            embedding = embed_image(local_path)
 
             upsert_embedding(
-
                 material,
-
                 {
-
-                    "id":
-                    board_id,
-
-                    "image_path":
-                    image_path,
-
-                    "formula_id":
-                    formula_id.strip(),
-
-                    "recipe_status":
-                    recipe_status
-
+                    "id": board_id,
+                    "image_path": image_path,
+                    "formula_id": formula_id.strip(),
+                    "recipe_status": recipe_status
                 },
-
                 embedding,
-
                 now
-
             )
 
             update_embedding_status(
@@ -272,23 +201,13 @@ def render_upload_page():
                 now
             )
 
-            st.success(
-                "✅ 色板建立完成（圖片 + 資料 + 向量）"
-            )
+            st.success("✅ 色板建立完成（圖片 + 資料 + 向量）")
 
         except Exception as e:
 
             try:
-
-                update_embedding_status(
-                    board_id,
-                    "FAILED",
-                    now
-                )
-
+                update_embedding_status(board_id, "FAILED", now)
             except:
                 pass
 
-            st.error(
-                f"❌ 建立失敗：{str(e)}"
-            )
+            st.error(f"❌ 建立失敗：{str(e)}")

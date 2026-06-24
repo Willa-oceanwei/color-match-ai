@@ -40,3 +40,8 @@ COLORBOARD_COLUMNS = [
     "ID", "Material", "ImagePath", "FormulaID", "FormulaMode", "RecipeStatus",
     "EmbeddingStatus", "Customer", "ColorName", "Pantone", "CreateDate", "LastUpdate", "Remark",
 ]
+
+google_drive_vectors_folder_id: str = os.getenv(
+    "GOOGLE_DRIVE_VECTORS_FOLDER_ID",
+    ""
+)

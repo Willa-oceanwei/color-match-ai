@@ -157,7 +157,7 @@ def render_sidebar():
 
     with st.sidebar:
         # 修改 erp-title 的字體大小（例如改為 28px）
-        st.markdown("<div class='erp-title' style='font-size: 24px; font-weight: bold;'>Color-Match-Ai</div>", unsafe_allow_html=True)
+        st.markdown("<div class='erp-title' style='font-size: 24px; font-weight: bold;'>Color-Match-AI</div>", unsafe_allow_html=True)
     
         # 修改 erp-sub 的字體大小（例如改為 14px）
         st.markdown("<div class='erp-sub' style='font-size: 12px; color: #888888;'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)
@@ -181,8 +181,8 @@ def render_sidebar():
 apply_modern_style()
 render_sidebar()
 
-st.title("🎨 color-match-ai")
-st.caption("色彩案例知識庫：樣品 → 拍照 → 上傳 → 找最相似色板 → 顯示配方")
+st.title("Color-Match-AI")
+st.caption("對色案例庫：樣品 → 拍照 → 上傳 → 找最相似色板 → 顯示配方")
 
 if st.session_state.get("menu") == "上傳色板":
     render_upload_page()

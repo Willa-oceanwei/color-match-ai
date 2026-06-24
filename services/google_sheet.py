@@ -62,16 +62,19 @@ def lookup_formula_by_id(formula_id: str) -> list[dict]:
         return []
     return [row for row in read_formulas() if str(row["FormulaID"]) == str(formula_id)]
 
-def get_all_colorboards(material: str):
+def get_all_colorboards(material: str = None):
     """
-    從 ColorBoard sheet 讀全部資料
-    並轉成 list[dict]
+    讀取 ColorBoard sheet 全部資料
+    可選擇依 Material 過濾
     """
 
-    # 這裡用你原本讀 sheet 的方式
-    rows = read_colorboard_sheet()  # 你應該已經有
+    rows = read_colorboard_sheet()  # 你應該已經有這個底層讀法
 
-    return [
-        r for r in rows
-        if r.get("Material") == material
-    ]
+    if material:
+        material = material.strip().upper()
+        return [
+            r for r in rows
+            if r.get("Material", "").strip().upper() == material
+        ]
+
+    return rows

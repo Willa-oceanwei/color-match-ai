@@ -1,8 +1,6 @@
 import streamlit as st
 from pathlib import Path
 from datetime import datetime
-from PIL import Image
-
 import os
 
 from config import SETTINGS
@@ -30,7 +28,7 @@ from services.id_utils import (
 def render_upload_page():
 
     st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>上傳色板資料庫</h2>",
+        "<h2 style='font-size: 24px; font-weight: bold;'>上傳色板資料庫</h2>",
         unsafe_allow_html=True
     )
 
@@ -38,11 +36,11 @@ def render_upload_page():
     # Material
     # =========================
     material = st.selectbox(
-        "Material（原料）",
+        "Material",
         ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
     )
 
-    formula_id = st.text_input("FormulaID（可空白）")
+    formula_id = st.text_input("FormulaID")
     customer = st.text_input("Customer")
     color_name = st.text_input("ColorName")
     pantone = st.text_input("Pantone")
@@ -67,22 +65,27 @@ def render_upload_page():
     recipe_status = recipe_status_label.split(" - ")[0]
 
     # =========================
-    # DEBUG
+    # DEBUG SYSTEM
     # =========================
     st.write("CWD =", os.getcwd())
     st.write("CSV Path =", SETTINGS.colorboard_csv_path)
-    st.write("CSV Exists =", Path(SETTINGS.colorboard_csv_path).exists())
     st.write("Vector Dir =", SETTINGS.vector_dir)
 
     # =========================
-    # Preview
+    # FILE UPLOAD PREVIEW (IMPORTANT FIX)
     # =========================
+    uploaded_bytes = None
+
     if uploaded:
+        uploaded_bytes = uploaded.getvalue()
+
         st.image(
-            Image.open(uploaded),
+            uploaded_bytes,
             caption="上傳預覽",
             width=260
         )
+
+        st.write("UPLOAD SIZE =", len(uploaded_bytes))
 
     # =========================
     # ID
@@ -99,34 +102,19 @@ def render_upload_page():
         extension
     )
 
-    st.info(
-        f"""
+    st.info(f"""
 📌 ID：{board_id}
-
 📁 檔名：{image_filename}
-
 🖼 Path：{image_path}
-
-"""
-    )
-
-    st.info("""
-📷 色板拍攝建議
-
-• 尺寸：512 × 512 px
-• 格式：JPG
-• 光源：D65
-• 背景：灰底
-• 樣品占比 70%
 """)
 
     # =========================
-    # Upload Button
+    # BUTTON
     # =========================
     if st.button("🚀 儲存並建立向量", type="primary", disabled=uploaded is None):
 
-        if not uploaded:
-            st.warning("請先上傳圖片")
+        if not uploaded_bytes:
+            st.error("❌ 圖片讀取失敗（uploaded_bytes = None）")
             return
 
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
@@ -135,27 +123,23 @@ def render_upload_page():
         try:
 
             # =====================
-            # Step 1: Save Image
+            # STEP 1: SAVE IMAGE
             # =====================
             st.info("📦 Step 1/3 儲存圖片...")
 
-            uploaded_bytes = uploaded.read()
+            write_uploaded_bytes(uploaded_bytes, image_path)
 
-            write_uploaded_bytes(
-                uploaded_bytes,
-                image_path
-            )
+            real_path = SETTINGS.local_drive_root / image_path
 
-            st.write("IMAGE EXISTS =", Path(SETTINGS.local_drive_root / image_path).exists())
-            st.write(
-                "IMAGE SIZE =",
-                Path(SETTINGS.local_drive_root / image_path).stat().st_size
-                if Path(SETTINGS.local_drive_root / image_path).exists()
-                else None
-            )
+            st.write("IMAGE EXISTS =", real_path.exists())
+            st.write("IMAGE SIZE =", real_path.stat().st_size if real_path.exists() else None)
+
+            # 🚨 HARD CHECK
+            if not real_path.exists() or real_path.stat().st_size == 0:
+                raise ValueError("圖片寫入失敗（0 bytes or missing file）")
 
             # =====================
-            # Step 2: CSV
+            # STEP 2: CSV
             # =====================
             st.info("🧾 Step 2/3 寫入 ColorBoard...")
 
@@ -166,7 +150,7 @@ def render_upload_page():
                 "FormulaID": formula_id.strip(),
                 "Material": normalize_material(material),
                 "ImagePath": image_path,
-                "FormulaMode": formula_mode,
+                "FormulaMode": str(formula_mode),
                 "RecipeStatus": recipe_status,
                 "EmbeddingStatus": "PROCESSING",
                 "Customer": customer,
@@ -179,15 +163,17 @@ def render_upload_page():
 
             append_colorboard_row(row)
 
-            st.write("DEBUG CSV =", SETTINGS.colorboard_csv_path)
             st.write("DEBUG ROW =", row)
 
             # =====================
-            # Step 3: Embedding
+            # STEP 3: EMBEDDING
             # =====================
             st.info("🧠 Step 3/3 建立向量...")
 
             local_path = resolve_local_image_path(image_path)
+
+            st.write("LOCAL PATH =", local_path)
+            st.write("LOCAL EXISTS =", Path(local_path).exists())
 
             embedding = embed_image(local_path)
 
@@ -203,11 +189,7 @@ def render_upload_page():
                 now
             )
 
-            update_embedding_status(
-                board_id,
-                "Y",
-                now
-            )
+            update_embedding_status(board_id, "Y", now)
 
             st.success("✅ 色板建立完成（圖片 + 資料 + 向量）")
 

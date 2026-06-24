@@ -1,6 +1,12 @@
 from datetime import datetime
 from pathlib import Path
 
+st.write("CWD =", os.getcwd())
+st.write("CSV =", SETTINGS.colorboard_csv_path)
+st.write("CSV exists =", Path(SETTINGS.colorboard_csv_path).exists())
+
+👉 然後你會立刻知道：
+
 import streamlit as st
 from PIL import Image
 

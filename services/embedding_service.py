@@ -56,10 +56,16 @@ def load_vector_store(material: str) -> dict:
         return pickle.load(file)
 
 
-def save_vector_store(material: str, store: dict) -> None:
+def save_vector_store(material: str, store: dict):
+
     path = vector_file_path(material)
+
+    print("SAVE TO =", path)
+
     with path.open("wb") as file:
         pickle.dump(store, file)
+
+    print("SAVE DONE")
 
 
 def upsert_embedding(material: str, item: dict, embedding: np.ndarray, updated_at: str) -> None:

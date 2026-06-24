@@ -23,7 +23,10 @@ from services.id_utils import (
 
 def render_upload_page():
 
-    st.header("🎨 上傳色板資料庫")
+    st.markdown(
+    "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>上傳色板資料庫</h2>", 
+    unsafe_allow_html=True
+    )
 
     # =========================
     # Material

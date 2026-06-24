@@ -161,7 +161,7 @@ def render_upload_page():
 
 📝 FormulaMode：{resolution.formula_mode}
 
-st.markdown("<small style='color: #666666;'>💡 備註：樣品占 60~80%；灰底占 20~40%；512*512</small>", unsafe_allow_html=True)
+    st.markdown("<small style='color: #666666;'>💡 備註：樣品占 60~80%；灰底占 20~40%；512*512</small>", unsafe_allow_html=True)
 """
     )
 

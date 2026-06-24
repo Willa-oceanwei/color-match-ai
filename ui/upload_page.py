@@ -32,6 +32,10 @@ def render_upload_page():
         unsafe_allow_html=True
     )
 
+    import os
+    from pathlib import Path
+    from datetime import datetime
+
     # =========================
     # Material
     # =========================
@@ -67,24 +71,19 @@ def render_upload_page():
     # =========================
     # DEBUG SYSTEM
     # =========================
-    st.write("CWD =", os.getcwd())
-    st.write("CSV Path =", SETTINGS.colorboard_csv_path)
-    st.write("Vector Dir =", SETTINGS.vector_dir)
+    st.write("🔥 CWD =", os.getcwd())
+    st.write("🔥 CSV Path =", SETTINGS.colorboard_csv_path)
+    st.write("🔥 Vector Dir =", SETTINGS.vector_dir)
 
-    # =========================
-    # FILE UPLOAD PREVIEW (IMPORTANT FIX)
-    # =========================
     uploaded_bytes = None
 
+    # =========================
+    # FILE PREVIEW
+    # =========================
     if uploaded:
         uploaded_bytes = uploaded.getvalue()
 
-        st.image(
-            uploaded_bytes,
-            caption="上傳預覽",
-            width=260
-        )
-
+        st.image(uploaded_bytes, caption="上傳預覽", width=260)
         st.write("UPLOAD SIZE =", len(uploaded_bytes))
 
     # =========================
@@ -96,11 +95,7 @@ def render_upload_page():
 
     image_filename = f"{board_id}{extension}"
 
-    image_path = build_image_path(
-        material,
-        board_id,
-        extension
-    )
+    image_path = build_image_path(material, board_id, extension)
 
     st.info(f"""
 📌 ID：{board_id}
@@ -113,8 +108,10 @@ def render_upload_page():
     # =========================
     if st.button("🚀 儲存並建立向量", type="primary", disabled=uploaded is None):
 
+        st.write("👉 STEP CHECK: BUTTON CLICKED")
+
         if not uploaded_bytes:
-            st.error("❌ 圖片讀取失敗（uploaded_bytes = None）")
+            st.error("❌ uploaded_bytes is None")
             return
 
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
@@ -134,9 +131,10 @@ def render_upload_page():
             st.write("IMAGE EXISTS =", real_path.exists())
             st.write("IMAGE SIZE =", real_path.stat().st_size if real_path.exists() else None)
 
-            # 🚨 HARD CHECK
             if not real_path.exists() or real_path.stat().st_size == 0:
-                raise ValueError("圖片寫入失敗（0 bytes or missing file）")
+                raise ValueError("圖片寫入失敗")
+
+            st.write("👉 AFTER IMAGE SAVE OK")
 
             # =====================
             # STEP 2: CSV
@@ -161,7 +159,9 @@ def render_upload_page():
                 "Remark": remark
             }
 
+            st.write("👉 BEFORE CSV APPEND")
             append_colorboard_row(row)
+            st.write("👉 AFTER CSV APPEND")
 
             st.write("DEBUG ROW =", row)
 
@@ -175,9 +175,14 @@ def render_upload_page():
             st.write("LOCAL PATH =", local_path)
             st.write("LOCAL EXISTS =", Path(local_path).exists())
 
+            st.write("👉 BEFORE EMBEDDING")
             embedding = embed_image(local_path)
+            st.write("👉 AFTER EMBEDDING")
+
             st.write("EMBEDDING TYPE =", type(embedding))
             st.write("EMBEDDING LENGTH =", len(embedding) if embedding is not None else None)
+
+            st.write("👉 BEFORE UPSERT")
 
             upsert_embedding(
                 material,
@@ -190,6 +195,8 @@ def render_upload_page():
                 embedding,
                 now
             )
+
+            st.write("👉 AFTER UPSERT")
 
             update_embedding_status(board_id, "Y", now)
 

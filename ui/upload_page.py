@@ -254,6 +254,12 @@ def render_upload_page():
 
             append_colorboard_row(row)
 
+            import os
+
+            st.write("Current Folder =", os.getcwd())
+            st.write("ColorBoard Path =", SETTINGS.colorboard_csv_path)
+            st.write("Vector Path =", SETTINGS.vector_dir)
+
             # Step3
 
             st.info(

@@ -44,8 +44,14 @@ def embed_image(image_path: Path) -> np.ndarray:
 
 
 def vector_file_path(material: str) -> Path:
+
+    path = SETTINGS.vector_dir / f"{material.upper()}_vectors.pkl"
+
+    print("🔥 VECTOR PATH =", path.resolve())
+
     SETTINGS.vector_dir.mkdir(parents=True, exist_ok=True)
-    return SETTINGS.vector_dir / f"{material.upper()}_vectors.pkl"
+
+    return path
 
 
 def load_vector_store(material: str) -> dict:

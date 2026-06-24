@@ -176,6 +176,8 @@ def render_upload_page():
             st.write("LOCAL EXISTS =", Path(local_path).exists())
 
             embedding = embed_image(local_path)
+            st.write("EMBEDDING TYPE =", type(embedding))
+            st.write("EMBEDDING LENGTH =", len(embedding) if embedding is not None else None)
 
             upsert_embedding(
                 material,

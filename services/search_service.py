@@ -1,6 +1,6 @@
 import numpy as np
 from services.embedding_service import embed_image
-from services.vector_db import get_all_embeddings
+from services.google_sheet import get_all_colorboards  # 你已有 or 可之後補
 
 
 def cosine_similarity(a, b):
@@ -13,24 +13,27 @@ def search_top_k(material: str, image_path, top_k: int = 5):
 
     query_vec = embed_image(image_path)
 
-    all_items = get_all_embeddings(material)
+    # 🔥 改成從 Google Sheet 讀資料（你現有系統）
+    all_items = get_all_colorboards(material)
 
     results = []
 
     for item in all_items:
 
+        if not item.get("embedding"):
+            continue
+
         score = cosine_similarity(query_vec, item["embedding"])
 
         results.append({
-            "id": item["id"],
+            "id": item["ID"],
             "score": round(score, 4),
-            "image_path": item["image_path"],
-            "formula_id": item.get("formula_id", ""),
-            "recipe_status": item.get("recipe_status", "UNKNOWN"),
-            "material": item.get("material", ""),
+            "image_path": item["ImagePath"],
+            "formula_id": item.get("FormulaID", ""),
+            "recipe_status": item.get("RecipeStatus", "UNKNOWN"),
+            "material": item.get("Material", ""),
         })
 
-    # 排序
-    results = sorted(results, key=lambda x: x["score"], reverse=True)
+    results.sort(key=lambda x: x["score"], reverse=True)
 
     return results[:top_k]

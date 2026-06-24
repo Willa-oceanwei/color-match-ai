@@ -1,88 +1,162 @@
-from pathlib import Path
-import csv
+import os
+import json
+import gspread
+from google.oauth2.service_account import Credentials
+
 from config import COLORBOARD_COLUMNS, SETTINGS
 
-FORMULA_COLUMNS = ["FormulaID", "Material", "FormulaName", "Colorant", "Ratio", "Remark"]
+
+FORMULA_COLUMNS = [
+    "FormulaID",
+    "Material",
+    "FormulaName",
+    "Colorant",
+    "Ratio",
+    "Remark"
+]
 
 
-def _ensure_csv(path: Path, columns: list[str]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        with path.open("w", newline="", encoding="utf-8") as file:
-            writer = csv.DictWriter(file, fieldnames=columns)
-            writer.writeheader()
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 
 
-def _read_csv(path: Path, columns: list[str]) -> list[dict]:
-    _ensure_csv(path, columns)
-    with path.open(newline="", encoding="utf-8") as file:
-        reader = csv.DictReader(file)
-        return [{column: (row.get(column) or "") for column in columns} for row in reader]
+# =========================
+# AUTH (Streamlit Cloud)
+# =========================
+def _get_client():
+
+    info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+
+    creds = Credentials.from_service_account_info(
+        info,
+        scopes=SCOPES
+    )
+
+    return gspread.authorize(creds)
 
 
-def _write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
-    print("🔥 WRITE CSV PATH =", path.resolve())
-    print("🔥 ROW COUNT =", len(rows))
-    print("🔥 CSV PATH =", SETTINGS.colorboard_csv_path.resolve())
+# =========================
+# SHEETS
+# =========================
+def _get_colorboard_ws():
 
-    path.parent.mkdir(parents=True, exist_ok=True)
+    client = _get_client()
 
-    with path.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=columns)
-        writer.writeheader()
-        writer.writerows([{column: row.get(column, "") for column in columns} for row in rows])
-
-    print("✅ CSV WRITE DONE")
-    print("🔥 EXISTS AFTER WRITE =", path.exists())
-    print("🔥 SIZE =", path.stat().st_size)
-
-def read_colorboard() -> list[dict]:
-    return _read_csv(SETTINGS.colorboard_csv_path, COLORBOARD_COLUMNS)
+    return client.open_by_key(
+        SETTINGS.colorboard_spreadsheet_id
+    ).worksheet(
+        SETTINGS.colorboard_worksheet_name
+    )
 
 
-def append_colorboard_row(row: dict) -> None:
-    rows = read_colorboard()
-    
-    print("👉 BEFORE APPEND COUNT =", len(rows))
-    print("👉 NEW ROW ID =", row.get("ID"))
-    
-    if row["ID"] in {existing["ID"] for existing in rows}:
+def _get_formula_ws():
+
+    client = _get_client()
+
+    return client.open_by_key(
+        SETTINGS.formula_spreadsheet_id
+    ).worksheet(
+        SETTINGS.formula_worksheet_name
+    )
+
+
+# =========================
+# COLORBOARD
+# =========================
+def read_colorboard():
+
+    ws = _get_colorboard_ws()
+
+    return ws.get_all_records()
+
+
+def append_colorboard_row(row: dict):
+
+    ws = _get_colorboard_ws()
+
+    rows = ws.get_all_records()
+
+    if row["ID"] in {r["ID"] for r in rows}:
         raise ValueError(f"ColorBoard ID 已存在：{row['ID']}")
-    rows.append({column: row.get(column, "") for column in COLORBOARD_COLUMNS})
-    _write_csv(SETTINGS.colorboard_csv_path, COLORBOARD_COLUMNS, rows)
+
+    ws.append_row([
+        row.get("ID", ""),
+        row.get("Material", ""),
+        row.get("ImagePath", ""),
+        row.get("FormulaID", ""),
+        row.get("FormulaMode", ""),
+        row.get("RecipeStatus", ""),
+        row.get("EmbeddingStatus", ""),
+        row.get("Customer", ""),
+        row.get("ColorName", ""),
+        row.get("Pantone", ""),
+        row.get("CreateDate", ""),
+        row.get("LastUpdate", ""),
+        row.get("Remark", ""),
+    ])
 
 
-def update_embedding_status(board_id: str, status: str, last_update: str) -> None:
-    rows = read_colorboard()
-    found = False
-    for row in rows:
+def update_embedding_status(board_id: str, status: str, last_update: str):
+
+    ws = _get_colorboard_ws()
+
+    rows = ws.get_all_records()
+
+    for i, row in enumerate(rows, start=2):
+
         if row["ID"] == board_id:
-            row["EmbeddingStatus"] = status
-            row["LastUpdate"] = last_update
-            found = True
-    if not found:
-        raise ValueError(f"找不到 ColorBoard ID：{board_id}")
-    _write_csv(SETTINGS.colorboard_csv_path, COLORBOARD_COLUMNS, rows)
 
+            ws.update(
+                f"G{i}",
+                [[status]]
+            )
 
-def read_formulas() -> list[dict]:
-    return _read_csv(SETTINGS.formula_csv_path, FORMULA_COLUMNS)
+            ws.update(
+                f"L{i}",
+                [[last_update]]
+            )
 
+            return
 
-def lookup_formula_by_id(formula_id: str) -> list[dict]:
-    if not formula_id:
-        return []
-    return [row for row in read_formulas() if str(row["FormulaID"]) == str(formula_id)]
+    raise ValueError(f"找不到 ColorBoard ID：{board_id}")
+
 
 def get_all_colorboards(material: str = None):
 
-    rows = read_colorboard()   # ✅ 改這裡
+    rows = read_colorboard()
 
     if material:
+
         material = material.strip().upper()
+
         return [
             r for r in rows
             if r.get("Material", "").strip().upper() == material
         ]
 
     return rows
+
+
+# =========================
+# FORMULA
+# =========================
+def read_formulas():
+
+    ws = _get_formula_ws()
+
+    return ws.get_all_records()
+
+
+def lookup_formula_by_id(formula_id: str):
+
+    if not formula_id:
+        return []
+
+    rows = read_formulas()
+
+    return [
+        r for r in rows
+        if str(r["FormulaID"]) == str(formula_id)
+    ]

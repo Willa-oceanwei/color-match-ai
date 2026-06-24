@@ -7,7 +7,10 @@ from services.search_service import search_top_k
 
 def render_search_page():
 
-    st.title("相近色板比對")
+    st.markdown(
+    "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>相近色板搜尋</h2>", 
+    unsafe_allow_html=True
+    )
 
     # =====================
     # INPUT

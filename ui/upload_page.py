@@ -209,8 +209,27 @@ def render_upload_page():
 
             update_embedding_status(board_id, "Y", now)
 
+            # =========================
+            # FINAL VERIFICATION (100%)
+            # =========================
+            st.write("🔥 FINAL VERIFICATION START")
+            
+            csv_path = SETTINGS.colorboard_csv_path
+            vector_path = SETTINGS.vector_dir / f"{material.upper()}_vectors.pkl"
+            image_path_abs = SETTINGS.local_drive_root / image_path
+            
+            st.write("📄 CSV EXISTS =", csv_path.exists())
+            st.write("📄 CSV PATH =", csv_path.resolve())
+            
+            st.write("🧠 VECTOR EXISTS =", vector_path.exists())
+            st.write("🧠 VECTOR PATH =", vector_path.resolve())
+            
+            st.write("🖼 IMAGE EXISTS =", image_path_abs.exists())
+            st.write("🖼 IMAGE SIZE =", image_path_abs.stat().st_size if image_path_abs.exists() else None)
+            
+            st.write("🔥 FINAL VERIFICATION DONE")
             st.success("✅ 色板建立完成（圖片 + 資料 + 向量）")
-
+            
         except Exception as e:
 
             try:

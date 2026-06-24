@@ -96,24 +96,22 @@ def render_upload_page():
 
     resolution = resolve_formula_mode(formula_id)
 
-    st.caption("""
-FormulaMode：
+    with st.expander("📘 狀態說明（點擊展開）"):
+        st.markdown("""
+    ### 🧪 FormulaMode
 
-OFFICIAL : 已存在正式配方
+    - **OFFICIAL**：已存在正式配方  
+    - **REFERENCE**：有配方但未正式管理  
+    - **TRIAL**：留樣無正式配方  
 
-REFERENCE : 有配方但未正式管理
+    ---
 
-TRIAL : 留樣無正式配方
+    ### 🧠 EmbeddingStatus
 
-
-EmbeddingStatus：
-
-PROCESSING : 建立向量中
-
-Y : 已建立完成
-
-FAILED : 建立失敗
-""")
+    - **PROCESSING**：建立向量中  
+    - **Y**：已建立完成  
+    - **FAILED**：建立失敗  
+     """)
 
     # =========================
     # 圖片預覽

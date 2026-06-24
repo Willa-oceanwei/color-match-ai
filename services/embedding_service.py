@@ -6,7 +6,8 @@ from config import SETTINGS
 
 
 def _color_stats_embedding(image_path: Path) -> np.ndarray:
-    image = Image.open(image_path).convert("RGB").resize((64, 64))
+    print("🔥 LOADING IMAGE =", image_path)
+    image = Image.open(str(image_path)).convert("RGB").resize((64, 64))
     arr = np.asarray(image, dtype=np.float32) / 255.0
     means = arr.mean(axis=(0, 1))
     stds = arr.std(axis=(0, 1))

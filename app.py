@@ -1,3 +1,13 @@
+import traceback
+print("APP START")
+
+try:
+    from ui.upload_page import render_upload_page
+    print("IMPORT OK")
+except Exception as e:
+    print("IMPORT FAILED")
+    print(traceback.format_exc())
+    
 import streamlit as st
 from ui.search_page import render_search_page
 from ui.upload_page import render_upload_page

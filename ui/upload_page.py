@@ -255,10 +255,27 @@ def render_upload_page():
             append_colorboard_row(row)
 
             import os
+            from pathlib import Path
 
             st.write("Current Folder =", os.getcwd())
+
             st.write("ColorBoard Path =", SETTINGS.colorboard_csv_path)
+            st.write(
+                "CSV Exists =",
+                Path(SETTINGS.colorboard_csv_path).exists()
+            )
+
             st.write("Vector Path =", SETTINGS.vector_dir)
+            st.write(
+                "Vector Folder Exists =",
+                Path(SETTINGS.vector_dir).exists()
+            )
+
+            if Path(SETTINGS.vector_dir).exists():
+                st.write(
+                    "Vector Files =",
+                    os.listdir(SETTINGS.vector_dir)
+                )
 
             # Step3
 

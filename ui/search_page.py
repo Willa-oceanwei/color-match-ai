@@ -45,6 +45,7 @@ def render_search_page():
             with st.spinner("AI Matching..."):
 
                 results = search_top_k(material, tmp_path, top_k=5)
+                st.write("DEBUG results:", results)
 
             # Step 3: render
             if not results:
@@ -57,4 +58,4 @@ def render_search_page():
         except Exception as e:
             st.error(f"Search error: {e}")
 
-st.write("DEBUG results:", results)
+

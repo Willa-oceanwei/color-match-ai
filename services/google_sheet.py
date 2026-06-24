@@ -34,6 +34,10 @@ def read_colorboard() -> list[dict]:
 
 def append_colorboard_row(row: dict) -> None:
     rows = read_colorboard()
+    
+    print("👉 BEFORE APPEND COUNT =", len(rows))
+    print("👉 NEW ROW ID =", row.get("ID"))
+    
     if row["ID"] in {existing["ID"] for existing in rows}:
         raise ValueError(f"ColorBoard ID 已存在：{row['ID']}")
     rows.append({column: row.get(column, "") for column in COLORBOARD_COLUMNS})

@@ -7,7 +7,7 @@ from services.search_service import search_top_k
 
 def render_search_page():
 
-    st.title("🎨 Color Matching AI (Factory V3)")
+    st.title("相近色板比對")
 
     # =====================
     # INPUT

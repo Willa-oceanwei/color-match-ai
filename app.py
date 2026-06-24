@@ -160,10 +160,8 @@ def render_sidebar():
         st.markdown("<div class='erp-title' style='font-size: 28px; font-weight: bold;'>color-match-ai</div>", unsafe_allow_html=True)
     
         # 修改 erp-sub 的字體大小（例如改為 14px）
-        st.markdown("<div class='erp-sub' style='font-size: 14px; color: #888888;'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)
-        st.markdown("<div class='erp-title'>color-match-ai</div>", unsafe_allow_html=True)
-        st.markdown("<div class='erp-sub'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)
-
+        st.markdown("<div class='erp-sub' style='font-size: 12px; color: #888888;'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)
+        
         current_group = None
         for item in MENU_ITEMS:
             if item["group"] != current_group:

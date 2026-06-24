@@ -13,14 +13,14 @@ def search_top_k(material: str, image_path, top_k: int = 5):
 
     query_vec = embed_image(image_path)
 
-    # 🔥 改成從 Google Sheet 讀資料（你現有系統）
     all_items = get_all_colorboards(material)
 
     results = []
 
     for item in all_items:
 
-        if not item.get("embedding"):
+        # ⚠️ 先 debug：不要 skip
+        if "embedding" not in item:
             continue
 
         score = cosine_similarity(query_vec, item["embedding"])

@@ -146,6 +146,14 @@ def render_upload_page():
                 image_path
             )
 
+            st.write("IMAGE EXISTS =", Path(SETTINGS.local_drive_root / image_path).exists())
+            st.write(
+                "IMAGE SIZE =",
+                Path(SETTINGS.local_drive_root / image_path).stat().st_size
+                if Path(SETTINGS.local_drive_root / image_path).exists()
+                else None
+            )
+
             # =====================
             # Step 2: CSV
             # =====================

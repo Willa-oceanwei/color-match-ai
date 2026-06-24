@@ -176,7 +176,16 @@ def render_upload_page():
             st.write("LOCAL EXISTS =", Path(local_path).exists())
 
             st.write("👉 BEFORE EMBEDDING")
-            embedding = embed_image(local_path)
+            st.write("🔥 LOCAL PATH TYPE =", type(local_path))
+            st.write("🔥 LOCAL PATH VALUE =", local_path)
+
+            try:
+                embedding = embed_image(local_path)
+            except Exception as e:
+                st.error("❌ EMBEDDING ERROR")
+                st.exception(e)
+                raise
+                
             st.write("👉 AFTER EMBEDDING")
 
             st.write("EMBEDDING TYPE =", type(embedding))

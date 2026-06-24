@@ -98,7 +98,7 @@ def render_upload_page():
 
     with st.expander("📘 狀態說明（點擊展開）"):
         st.markdown("""
-    ### 🧪 FormulaMode
+    ##### 🧪 FormulaMode
 
     - **OFFICIAL**：已存在正式配方  
     - **REFERENCE**：有配方但未正式管理  

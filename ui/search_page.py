@@ -56,3 +56,5 @@ def render_search_page():
 
         except Exception as e:
             st.error(f"Search error: {e}")
+
+st.write("DEBUG results:", results)

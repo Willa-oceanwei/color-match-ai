@@ -106,7 +106,7 @@ def render_upload_page():
 
     ---
 
-    ### 🧠 EmbeddingStatus
+    ##### 🧠 EmbeddingStatus
 
     - **PROCESSING**：建立向量中  
     - **Y**：已建立完成  

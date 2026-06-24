@@ -1,14 +1,10 @@
-from datetime import datetime
-from pathlib import Path
-
-st.write("CWD =", os.getcwd())
-st.write("CSV =", SETTINGS.colorboard_csv_path)
-st.write("CSV exists =", Path(SETTINGS.colorboard_csv_path).exists())
-
-👉 然後你會立刻知道：
-
 import streamlit as st
+import os
+from pathlib import Path
+from datetime import datetime
 from PIL import Image
+
+from config import SETTINGS
 
 from services.embedding_service import embed_image, upsert_embedding
 from services.formula_service import resolve_formula_mode
@@ -30,8 +26,8 @@ from services.id_utils import (
 def render_upload_page():
 
     st.markdown(
-    "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>上傳色板資料庫</h2>", 
-    unsafe_allow_html=True
+        "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>上傳色板資料庫</h2>",
+        unsafe_allow_html=True
     )
 
     # =========================
@@ -40,51 +36,19 @@ def render_upload_page():
 
     material = st.selectbox(
         "Material（原料）",
-        [
-            "PP",
-            "ABS",
-            "TPR",
-            "NY",
-            "PC",
-            "PE",
-            "PVC",
-            "PS",
-            "OTHER"
-        ]
+        ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
     )
 
-    # =========================
-    # 基本資料
-    # =========================
-
-    formula_id = st.text_input(
-        "FormulaID（可空白）"
-    )
-
-    customer = st.text_input(
-        "Customer"
-    )
-
-    color_name = st.text_input(
-        "ColorName"
-    )
-
-    pantone = st.text_input(
-        "Pantone"
-    )
-
-    remark = st.text_area(
-        "Remark"
-    )
+    formula_id = st.text_input("FormulaID（可空白）")
+    customer = st.text_input("Customer")
+    color_name = st.text_input("ColorName")
+    pantone = st.text_input("Pantone")
+    remark = st.text_area("Remark")
 
     uploaded = st.file_uploader(
         "上傳色板照片",
         type=["jpg", "jpeg", "png"]
     )
-
-    # =========================
-    # Recipe Status
-    # =========================
 
     recipe_status_label = st.selectbox(
         "RecipeStatus（配方狀態）",
@@ -100,34 +64,18 @@ def render_upload_page():
     recipe_status = recipe_status_label.split(" - ")[0]
 
     # =========================
-    # FormulaMode
+    # DEBUG（放在 function 裡）
     # =========================
 
-    resolution = resolve_formula_mode(formula_id)
-
-    with st.expander("📘 狀態說明（點擊展開）"):
-        st.markdown("""
-    ##### 🧪 FormulaMode
-
-    - **OFFICIAL**：已存在正式配方  
-    - **REFERENCE**：有配方但未正式管理  
-    - **TRIAL**：留樣無正式配方  
-
-    ---
-
-    ##### 🧠 EmbeddingStatus
-
-    - **PROCESSING**：建立向量中  
-    - **Y**：已建立完成  
-    - **FAILED**：建立失敗  
-     """)
+    st.write("CWD =", os.getcwd())
+    st.write("CSV =", SETTINGS.colorboard_csv_path)
+    st.write("CSV exists =", Path(SETTINGS.colorboard_csv_path).exists())
 
     # =========================
     # 圖片預覽
     # =========================
 
     if uploaded:
-
         st.image(
             Image.open(uploaded),
             caption="上傳預覽",
@@ -138,16 +86,9 @@ def render_upload_page():
     # ID
     # =========================
 
-    board_id = build_board_id(
-        material,
-        formula_id or None
-    )
+    board_id = build_board_id(material, formula_id or None)
 
-    extension = (
-        Path(uploaded.name).suffix
-        if uploaded
-        else ".jpg"
-    )
+    extension = Path(uploaded.name).suffix if uploaded else ".jpg"
 
     image_filename = f"{board_id}{extension}"
 
@@ -156,6 +97,8 @@ def render_upload_page():
         board_id,
         extension
     )
+
+    # 👉 之後你的 upload / append / vector pipeline 在這裡接
 
     st.info(
         f"""

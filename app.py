@@ -157,7 +157,7 @@ def render_sidebar():
 
     with st.sidebar:
         # 修改 erp-title 的字體大小（例如改為 28px）
-        st.markdown("<div class='erp-title' style='font-size: 22px; font-weight: bold;'>color-match-ai</div>", unsafe_allow_html=True)
+        st.markdown("<div class='erp-title' style='font-size: 24px; font-weight: bold;'>Color-Match-Ai</div>", unsafe_allow_html=True)
     
         # 修改 erp-sub 的字體大小（例如改為 14px）
         st.markdown("<div class='erp-sub' style='font-size: 12px; color: #888888;'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)

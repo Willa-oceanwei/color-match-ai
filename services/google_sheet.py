@@ -21,12 +21,19 @@ def _read_csv(path: Path, columns: list[str]) -> list[dict]:
 
 
 def _write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
+    print("🔥 WRITE CSV PATH =", path.resolve())
+    print("🔥 ROW COUNT =", len(rows))
+
     path.parent.mkdir(parents=True, exist_ok=True)
+
     with path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=columns)
         writer.writeheader()
         writer.writerows([{column: row.get(column, "") for column in columns} for row in rows])
 
+    print("✅ CSV WRITE DONE")
+    print("🔥 EXISTS AFTER WRITE =", path.exists())
+    print("🔥 SIZE =", path.stat().st_size)
 
 def read_colorboard() -> list[dict]:
     return _read_csv(SETTINGS.colorboard_csv_path, COLORBOARD_COLUMNS)

@@ -1,33 +1,27 @@
-import os
 import json
+from functools import lru_cache
+
 import gspread
+import streamlit as st
 from google.oauth2.service_account import Credentials
 
-from config import COLORBOARD_COLUMNS, SETTINGS
+from config import SETTINGS
 
 
-FORMULA_COLUMNS = [
-    "FormulaID",
-    "Material",
-    "FormulaName",
-    "Colorant",
-    "Ratio",
-    "Remark"
-]
-
-
+# =========================
+# AUTH
+# =========================
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
 
-# =========================
-# AUTH (Streamlit Cloud)
-# =========================
+@lru_cache
 def _get_client():
 
-    info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+    # Streamlit Cloud secrets
+    info = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
 
     creds = Credentials.from_service_account_info(
         info,
@@ -78,24 +72,28 @@ def append_colorboard_row(row: dict):
 
     rows = ws.get_all_records()
 
+    # check duplicate
     if row["ID"] in {r["ID"] for r in rows}:
         raise ValueError(f"ColorBoard ID 已存在：{row['ID']}")
 
-    ws.append_row([
-        row.get("ID", ""),
-        row.get("Material", ""),
-        row.get("ImagePath", ""),
-        row.get("FormulaID", ""),
-        row.get("FormulaMode", ""),
-        row.get("RecipeStatus", ""),
-        row.get("EmbeddingStatus", ""),
-        row.get("Customer", ""),
-        row.get("ColorName", ""),
-        row.get("Pantone", ""),
-        row.get("CreateDate", ""),
-        row.get("LastUpdate", ""),
-        row.get("Remark", ""),
-    ])
+    ws.append_row(
+        [
+            row.get("ID", ""),
+            row.get("Material", ""),
+            row.get("ImagePath", ""),
+            row.get("FormulaID", ""),
+            row.get("FormulaMode", ""),
+            row.get("RecipeStatus", ""),
+            row.get("EmbeddingStatus", ""),
+            row.get("Customer", ""),
+            row.get("ColorName", ""),
+            row.get("Pantone", ""),
+            row.get("CreateDate", ""),
+            row.get("LastUpdate", ""),
+            row.get("Remark", ""),
+        ],
+        value_input_option="USER_ENTERED"
+    )
 
 
 def update_embedding_status(board_id: str, status: str, last_update: str):
@@ -104,19 +102,15 @@ def update_embedding_status(board_id: str, status: str, last_update: str):
 
     rows = ws.get_all_records()
 
-    for i, row in enumerate(rows, start=2):
+    for i, row in enumerate(rows, start=2):  # row 1 = header
 
         if row["ID"] == board_id:
 
-            ws.update(
-                f"G{i}",
-                [[status]]
-            )
+            # G = EmbeddingStatus
+            ws.update(f"G{i}", status)
 
-            ws.update(
-                f"L{i}",
-                [[last_update]]
-            )
+            # L = LastUpdate
+            ws.update(f"L{i}", last_update)
 
             return
 

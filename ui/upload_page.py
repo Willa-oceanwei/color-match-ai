@@ -83,14 +83,13 @@ def render_upload_page():
         create_date = datetime.now().strftime("%Y/%m/%d")
 
         try:
-
             # =====================
             # STEP 1 IMAGE
             # =====================
-            write_uploaded_bytes(uploaded_bytes, image_path)
+            from services.google_drive import write_uploaded_bytes_get_base64
+            image_path, image_base64 = write_uploaded_bytes_get_base64(uploaded_bytes, image_path)
 
             image_full_path = SETTINGS.local_drive_root / image_path
-
             if not image_full_path.exists() or image_full_path.stat().st_size == 0:
                 raise ValueError("Image write failed")
 
@@ -112,8 +111,11 @@ def render_upload_page():
                 "Pantone": pantone,
                 "CreateDate": create_date,
                 "LastUpdate": now,
-                "Remark": remark
+                "Remark": remark,
+                "ImageBase64": image_base64,
             }
+
+            append_colorboard_row(row)
 
             append_colorboard_row(row)
 

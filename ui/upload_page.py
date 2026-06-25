@@ -39,7 +39,7 @@ def render_upload_page():
     # =========================
     # INPUT
     # =========================
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         material = st.selectbox(
             "Material",
@@ -47,18 +47,16 @@ def render_upload_page():
         )
     with col2:
         formula_id = st.text_input("FormulaID")
-
-    col3, col4 = st.columns(2)
     with col3:
         customer = st.text_input("Customer")
+
+    col4, col5, col6 = st.columns(3)
     with col4:
         color_name = st.text_input("ColorName")
-
-    col5, col6 = st.columns(2)
     with col5:
         pantone = st.text_input("Pantone")
     with col6:
-        remark = st.text_area("Remark", height=68)
+        remark = st.text_input("Remark")
     # =========================
     # 配方輸入（選填）
     # =========================

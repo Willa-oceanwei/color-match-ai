@@ -36,10 +36,8 @@ def _get_formula_ws():
 
 def _get_vectors_ws():
     client = _get_client()
-    return client.open_by_key(
-        SETTINGS.colorboard_spreadsheet_id
-    ).worksheet("Vectors")
-
+    spreadsheet = client.open_by_key(SETTINGS.colorboard_spreadsheet_id)
+    return spreadsheet.get_worksheet_by_id(1827878360)
 
 # =========================
 # COLORBOARD

@@ -33,7 +33,9 @@ def _get_drive_service():
 def _find_file_id(service, file_name: str, folder_id: str) -> str | None:
     result = service.files().list(
         q=f"name='{file_name}' and '{folder_id}' in parents and trashed=false",
-        fields="files(id, name)"
+        fields="files(id, name)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True
     ).execute()
     files = result.get("files", [])
     return files[0]["id"] if files else None
@@ -43,7 +45,6 @@ def _find_file_id(service, file_name: str, folder_id: str) -> str | None:
 # 圖片
 # =========================
 def write_uploaded_bytes(content: bytes, image_path: str) -> str:
-    st.write("所有 secrets keys =", list(st.secrets.keys()))
     # 本地暫存
     destination = SETTINGS.local_drive_root / image_path
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -58,17 +59,18 @@ def write_uploaded_bytes(content: bytes, image_path: str) -> str:
     file_name = Path(image_path).name
     media = MediaIoBaseUpload(io.BytesIO(content), mimetype="image/jpeg")
 
-    # 檢查是否已存在
     existing_id = _find_file_id(service, file_name, folder_id)
     if existing_id:
         service.files().update(
             fileId=existing_id,
-            media_body=media
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
     else:
         service.files().create(
             body={"name": file_name, "parents": [folder_id]},
-            media_body=media
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
 
     return image_path
@@ -104,12 +106,14 @@ def save_vector_to_drive(material: str, store: dict):
     if existing_id:
         service.files().update(
             fileId=existing_id,
-            media_body=media
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
     else:
         service.files().create(
             body={"name": file_name, "parents": [folder_id]},
-            media_body=media
+            media_body=media,
+            supportsAllDrives=True
         ).execute()
 
 

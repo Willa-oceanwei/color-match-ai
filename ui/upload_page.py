@@ -39,17 +39,26 @@ def render_upload_page():
     # =========================
     # INPUT
     # =========================
-    material = st.selectbox(
-        "Material",
-        ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
-    )
+    col1, col2 = st.columns(2)
+    with col1:
+        material = st.selectbox(
+            "Material",
+            ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
+        )
+    with col2:
+        formula_id = st.text_input("FormulaID")
 
-    formula_id = st.text_input("FormulaID")
-    customer = st.text_input("Customer")
-    color_name = st.text_input("ColorName")
-    pantone = st.text_input("Pantone")
-    remark = st.text_area("Remark")
+    col3, col4 = st.columns(2)
+    with col3:
+        customer = st.text_input("Customer")
+    with col4:
+        color_name = st.text_input("ColorName")
 
+    col5, col6 = st.columns(2)
+    with col5:
+        pantone = st.text_input("Pantone")
+    with col6:
+        remark = st.text_area("Remark", height=68)
     # =========================
     # 配方輸入（選填）
     # =========================

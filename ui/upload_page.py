@@ -54,30 +54,50 @@ def render_upload_page():
     # 配方輸入（選填）
     # =========================
     with st.expander("🧪 輸入配方資料（選填）"):
-        col_a, col_b = st.columns(2)
+        col_a, col_b, col_c = st.columns(3)
         with col_a:
             add_ratio = st.number_input("添加比例 (g/kg)", min_value=0.0, step=0.1, format="%.1f")
         with col_b:
             net_weight = st.number_input("淨重 (g)", min_value=0.0, step=0.1, format="%.1f")
-
-        total_type = st.selectbox(
-            "合計類別",
-            ["", "LA", "MA", "S", "CA", "T9", "其他"]
-        )
+        with col_c:
+            total_type = st.selectbox(
+                "合計類別",
+                ["", "LA", "MA", "S", "CA", "T9", "其他"]
+            )
 
         st.markdown("**色粉資料**")
+
+        # 色粉編號：每列4個
         pigments = []
         weights = []
-        for i in range(1, 9):
-            col1, col2 = st.columns(2)
-            with col1:
-                p = st.text_input(f"色粉編號 {i}", key=f"pigment_{i}")
-            with col2:
-                w = st.number_input(f"重量 {i} (g)", min_value=0.0, step=0.01, format="%.2f", key=f"weight_{i}")
-            pigments.append(p)
-            weights.append(w)
 
-        formula_remark = st.text_input("配方備註", key="formula_remark")
+        cols_p = st.columns(4)
+        for i in range(4):
+            with cols_p[i]:
+                p = st.text_input(f"色粉編號 {i+1}", key=f"pigment_{i+1}")
+                pigments.append(p)
+
+        cols_w = st.columns(4)
+        for i in range(4):
+            with cols_w[i]:
+                w = st.number_input(f"重量 {i+1} (g)", min_value=0.0, step=0.01, format="%.2f", key=f"weight_{i+1}")
+                weights.append(w)
+
+        cols_p2 = st.columns(4)
+        for i in range(4, 8):
+            with cols_p2[i-4]:
+                p = st.text_input(f"色粉編號 {i+1}", key=f"pigment_{i+1}")
+                pigments.append(p)
+
+        cols_w2 = st.columns(4)
+        for i in range(4, 8):
+            with cols_w2[i-4]:
+                w = st.number_input(f"重量 {i+1} (g)", min_value=0.0, step=0.01, format="%.2f", key=f"weight_{i+1}")
+                weights.append(w)
+
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            formula_remark = st.text_input("配方備註", key="formula_remark")
 
     uploaded = st.file_uploader("上傳色板照片", type=["jpg", "jpeg", "png"])
 

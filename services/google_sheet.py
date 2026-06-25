@@ -1,12 +1,10 @@
 import json
+import re
 from functools import lru_cache
-
 import gspread
 import streamlit as st
 from google.oauth2.service_account import Credentials
-
 from config import SETTINGS
-
 
 # =========================
 # AUTH
@@ -17,21 +15,9 @@ SCOPES = [
 ]
 
 @lru_cache
-import re
-
-@lru_cache
 def _get_client():
     raw = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
-    
-    # 只把 private_key 值裡的真實換行換成 \n，其他不動
-    fixed = re.sub(
-        r'("private_key"\s*:\s*")(.*?)(")',
-        lambda m: m.group(1) + m.group(2).replace('\n', '\\n') + m.group(3),
-        raw,
-        flags=re.DOTALL
-    )
-    
-    info = json.loads(fixed)
+    info = json.loads(raw)  # 已經是單行 JSON，直接 parse
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return gspread.authorize(creds)
 

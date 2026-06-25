@@ -29,20 +29,23 @@ def render_search_page():
     # BUTTON
     # =====================
     if st.button("🔍 Start Matching", disabled=uploaded is None):
-
-        st.write("🟢 BUTTON TRIGGERED")  # ✅ 一定要看到
-
         try:
             tmp_path = Path("tmp/query.jpg")
             tmp_path.parent.mkdir(parents=True, exist_ok=True)
             tmp_path.write_bytes(uploaded.getvalue())
 
-            st.write("📦 image saved")
-
             results = search_top_k(material, tmp_path, top_k=5)
 
-            # 🔥 強制顯示 results（關鍵）
-            st.write("📊 RAW RESULTS:", results)
+            if not results:
+                st.warning("⚠️ 沒有搜尋結果")
+                return
+
+            st.success(f"找到 {len(results)} 筆結果")
+            for i, r in enumerate(results, 1):
+                render_result_card(i, r)
+
+        except Exception as e:
+            st.error(f"SEARCH ERROR: {e}")
 
             # =====================
             # NO DATA

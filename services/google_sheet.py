@@ -16,8 +16,8 @@ SCOPES = [
 
 @lru_cache
 def _get_client():
-    raw = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
-    info = json.loads(raw)  # 已經是單行 JSON，直接 parse
+    raw = st.secrets["gcp_service_account"]
+    info = json.loads(raw)
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return gspread.authorize(creds)
 

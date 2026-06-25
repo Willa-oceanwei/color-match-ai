@@ -16,12 +16,7 @@ SCOPES = [
 
 @lru_cache
 def _get_client():
-    raw = st.secrets["gcp_service_account"]
-    # 修復 private_key 裡的真實換行
-    fixed = raw.replace('\n', '\\n')
-    # 但 JSON 結構本身的 } 前面不能有 \\n，還原大括號周圍
-    fixed = fixed.replace('\\n}', '\n}').replace('{\\n', '{\n')
-    info = json.loads(fixed)
+    info = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return gspread.authorize(creds)
     

@@ -74,50 +74,26 @@ def render_upload_page():
     # BUTTON
     # =========================
     if st.button("🚀 儲存並建立向量", disabled=uploaded is None):
-
         if not uploaded_bytes:
             st.error("No image")
             return
-
+        
+        # 防止 Streamlit re-run 重複執行
+        if st.session_state.get("last_uploaded_id") == board_id:
+            st.warning("⚠️ 已上傳過，請勿重複送出")
+            return
+        
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         create_date = datetime.now().strftime("%Y/%m/%d")
-
         try:
             # =====================
             # STEP 1 IMAGE
             # =====================
             from services.google_drive import write_uploaded_bytes_get_base64
             image_path, image_base64 = write_uploaded_bytes_get_base64(uploaded_bytes, image_path)
-
             image_full_path = SETTINGS.local_drive_root / image_path
             if not image_full_path.exists() or image_full_path.stat().st_size == 0:
                 raise ValueError("Image write failed")
-
-            # =====================
-            # STEP 2 GOOGLE SHEET（核心）
-            # =====================
-            formula_mode = resolve_formula_mode(formula_id)
-
-            row = {
-                "ID": board_id,
-                "FormulaID": formula_id.strip(),
-                "Material": normalize_material(material),
-                "ImagePath": image_path,
-                "FormulaMode": str(formula_mode),
-                "RecipeStatus": recipe_status,
-                "EmbeddingStatus": "PROCESSING",
-                "Customer": customer,
-                "ColorName": color_name,
-                "Pantone": pantone,
-                "CreateDate": create_date,
-                "LastUpdate": now,
-                "Remark": remark,
-                "ImageBase64": image_base64,
-            }
-
-            append_colorboard_row(row)
-
-            append_colorboard_row(row)
 
             # =====================
             # STEP 3 EMBEDDING (CACHE)

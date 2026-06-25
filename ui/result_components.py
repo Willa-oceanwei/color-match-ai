@@ -33,7 +33,11 @@ def render_result_card(index: int, result: dict):
         col1, col2 = st.columns(2)
         with col1:
             st.caption("查詢樣品")
-            st.image("tmp/query.jpg", use_container_width=True)
+            try:
+                st.image("tmp/query.jpg", use_container_width=True)
+            except Exception:
+                st.info("查詢樣品無法顯示")
+
         with col2:
             st.caption("歷史色板")
             b64 = result.get("image_base64", "")

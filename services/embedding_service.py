@@ -56,23 +56,12 @@ def vector_file_path(material: str) -> Path:
 
 
 def load_vector_store(material: str) -> dict:
-    path = vector_file_path(material)
-    if not path.exists():
-        return {"material": material.upper(), "model_name": SETTINGS.embedding_backend, "updated_at": "", "items": []}
-    with path.open("rb") as file:
-        return pickle.load(file)
-
+    from services.google_drive import load_vector_from_drive
+    return load_vector_from_drive(material)
 
 def save_vector_store(material: str, store: dict):
-
-    path = vector_file_path(material)
-
-    print("SAVE TO =", path)
-
-    with path.open("wb") as file:
-        pickle.dump(store, file)
-
-    print("SAVE DONE")
+    from services.google_drive import save_vector_to_drive
+    save_vector_to_drive(material, store)
 
 
 def upsert_embedding(material: str, item: dict, embedding: np.ndarray, updated_at: str) -> None:

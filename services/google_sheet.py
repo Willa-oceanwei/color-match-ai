@@ -54,7 +54,6 @@ def append_colorboard_row(row: dict):
     ws = _get_colorboard_ws()
     rows = ws.get_all_records()
     existing_ids = [r["ID"] for r in rows]
-    st.write("Sheet 現有 ID =", existing_ids)  # 看實際讀到什麼
     if row["ID"] in {r["ID"] for r in rows}:
         raise ValueError(f"ColorBoard ID 已存在：{row['ID']}")
     ws.append_row(

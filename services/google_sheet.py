@@ -148,3 +148,49 @@ def lookup_formula_by_id(formula_id: str):
         r for r in rows
         if str(r["FormulaID"]) == str(formula_id)
     ]
+
+def append_formula_row(row: dict):
+    ws = _get_formula_ws()
+    rows = ws.get_all_records()
+    for i, r in enumerate(rows, start=2):
+        if str(r["FormulaID"]) == str(row["FormulaID"]):
+            ws.update(f"A{i}", [[
+                row.get("FormulaID", ""),
+                row.get("ColorName", ""),
+                row.get("Customer", ""),
+                row.get("Pantone", ""),
+                row.get("AddRatio", ""),
+                row.get("NetWeight", ""),
+                row.get("Pigment1", ""), row.get("Pigment2", ""),
+                row.get("Pigment3", ""), row.get("Pigment4", ""),
+                row.get("Pigment5", ""), row.get("Pigment6", ""),
+                row.get("Pigment7", ""), row.get("Pigment8", ""),
+                row.get("Weight1", ""), row.get("Weight2", ""),
+                row.get("Weight3", ""), row.get("Weight4", ""),
+                row.get("Weight5", ""), row.get("Weight6", ""),
+                row.get("Weight7", ""), row.get("Weight8", ""),
+                row.get("TotalType", ""),
+                row.get("Remark", ""),
+            ]])
+            return
+    ws.append_row(
+        [
+            row.get("FormulaID", ""),
+            row.get("ColorName", ""),
+            row.get("Customer", ""),
+            row.get("Pantone", ""),
+            row.get("AddRatio", ""),
+            row.get("NetWeight", ""),
+            row.get("Pigment1", ""), row.get("Pigment2", ""),
+            row.get("Pigment3", ""), row.get("Pigment4", ""),
+            row.get("Pigment5", ""), row.get("Pigment6", ""),
+            row.get("Pigment7", ""), row.get("Pigment8", ""),
+            row.get("Weight1", ""), row.get("Weight2", ""),
+            row.get("Weight3", ""), row.get("Weight4", ""),
+            row.get("Weight5", ""), row.get("Weight6", ""),
+            row.get("Weight7", ""), row.get("Weight8", ""),
+            row.get("TotalType", ""),
+            row.get("Remark", ""),
+        ],
+        value_input_option="USER_ENTERED"
+    )

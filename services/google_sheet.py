@@ -10,8 +10,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-
-@lru_cache
 def _get_client():
     info = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)

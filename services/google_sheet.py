@@ -16,20 +16,18 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-
 @lru_cache
 def _get_client():
-
-    # Streamlit Cloud secrets
-    info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
-
-    creds = Credentials.from_service_account_info(
-        info,
-        scopes=SCOPES
-    )
-
+    raw = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+    
+    # 如果是字串就 parse，如果已經是 dict 就直接用
+    if isinstance(raw, str):
+        info = json.loads(raw.replace("\\n", "\n"))
+    else:
+        info = dict(raw)
+    
+    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return gspread.authorize(creds)
-
 
 # =========================
 # SHEETS

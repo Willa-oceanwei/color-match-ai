@@ -63,6 +63,7 @@ def append_colorboard_row(row: dict):
             row.get("Material", ""),
             row.get("ImagePath", ""),
             row.get("FormulaID", ""),
+            row.get("FormulaMode", ""),
             row.get("RecipeStatus", ""),
             row.get("EmbeddingStatus", ""),
             row.get("Customer", ""),

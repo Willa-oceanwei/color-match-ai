@@ -19,17 +19,9 @@ SCOPES = [
 @lru_cache
 def _get_client():
     raw = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
-    
-    if isinstance(raw, str):
-        # 先把真正的換行符（control char）替換掉，只保留在 private_key 裡的
-        # 策略：整個字串先 escape 真實換行，再 parse
-        fixed = raw.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
-        info = json.loads(fixed)
-    else:
-        info = dict(raw)
-    
-    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
-    return gspread.authorize(creds)
+    st.code(f"type: {type(raw)}")
+    st.code(repr(raw[:300]))
+    return None
 
 # =========================
 # SHEETS

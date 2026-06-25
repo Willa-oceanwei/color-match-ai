@@ -15,6 +15,8 @@ SCOPES = [
 ]
 
 def _get_drive_service():
+    st.write("ROOT FOLDER ID =", SETTINGS.google_drive_root_folder_id)
+    st.write("VECTORS FOLDER ID =", SETTINGS.google_drive_vectors_folder_id)
     info = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return build("drive", "v3", credentials=creds)

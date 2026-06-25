@@ -43,6 +43,7 @@ def _find_file_id(service, file_name: str, folder_id: str) -> str | None:
 # 圖片
 # =========================
 def write_uploaded_bytes(content: bytes, image_path: str) -> str:
+    st.write("所有 secrets keys =", list(st.secrets.keys()))
     # 本地暫存
     destination = SETTINGS.local_drive_root / image_path
     destination.parent.mkdir(parents=True, exist_ok=True)

@@ -15,15 +15,10 @@ def _get_client():
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     return gspread.authorize(creds)
 
-
 def _get_colorboard_ws():
     client = _get_client()
-    return client.open_by_key(
-        SETTINGS.colorboard_spreadsheet_id
-    ).worksheet(
-        SETTINGS.colorboard_worksheet_name
-    )
-
+    spreadsheet = client.open_by_key(SETTINGS.colorboard_spreadsheet_id)
+    return spreadsheet.get_worksheet_by_id(0)
 
 def _get_formula_ws():
     client = _get_client()

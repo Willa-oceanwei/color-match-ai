@@ -23,7 +23,7 @@ def render_result_card(index: int, result: dict):
 
     with st.container():
         st.markdown(f"""
-        ### {color} Rank #{index} | 相似度：{score:.2%}
+        ##### {color} Rank #{index} | 相似度：{score:.2%}
         **ID**：{result["id"]}  
         **Material**：{result["material"]}  
         **Formula**：{result["formula_id"]}  

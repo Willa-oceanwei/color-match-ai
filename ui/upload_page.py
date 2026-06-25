@@ -124,8 +124,8 @@ def render_upload_page():
         except Exception as e:
             import traceback
             st.error(f"❌ ERROR: {str(e)}")
-            st.code(traceback.format_exc())  # 加這行看完整錯誤
+            st.code(traceback.format_exc())
             try:
                 update_embedding_status(board_id, "FAILED", now)
-            except:
-                pass
+            except Exception as e2:
+                st.error(f"update status failed: {e2}")

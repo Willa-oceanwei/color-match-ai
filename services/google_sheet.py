@@ -21,7 +21,7 @@ SCOPES = [
 def _get_client():
 
     # Streamlit Cloud secrets
-    info = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
+    info = dict(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
 
     creds = Credentials.from_service_account_info(
         info,

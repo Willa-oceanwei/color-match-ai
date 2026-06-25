@@ -86,6 +86,7 @@ def render_upload_page():
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         create_date = datetime.now().strftime("%Y/%m/%d")
         try:
+            try:
             # =====================
             # STEP 1 IMAGE
             # =====================
@@ -96,16 +97,36 @@ def render_upload_page():
                 raise ValueError("Image write failed")
 
             # =====================
-            # STEP 3 EMBEDDING (CACHE)
+            # STEP 2 GOOGLE SHEET
+            # =====================
+            formula_mode = resolve_formula_mode(formula_id)
+            row = {
+                "ID": board_id,
+                "FormulaID": formula_id.strip(),
+                "Material": normalize_material(material),
+                "ImagePath": image_path,
+                "FormulaMode": str(formula_mode),
+                "RecipeStatus": recipe_status,
+                "EmbeddingStatus": "PROCESSING",
+                "Customer": customer,
+                "ColorName": color_name,
+                "Pantone": pantone,
+                "CreateDate": create_date,
+                "LastUpdate": now,
+                "Remark": remark,
+                "ImageBase64": image_base64,
+            }
+            append_colorboard_row(row)
+
+            # =====================
+            # STEP 3 EMBEDDING
             # =====================
             local_path = resolve_local_image_path(image_path)
-
             embedding = get_cached_embedding(
                 material,
                 image_path,
                 lambda: embed_image(local_path)
             )
-
             upsert_embedding(material, {
                 "id": board_id,
                 "image_path": image_path,
@@ -119,7 +140,16 @@ def render_upload_page():
             # DONE
             # =====================
             st.success("✅ 上傳完成（Google Sheet + Vector + Image）")
-            st.session_state["last_uploaded_id"] = board_id  # 加這行
+            st.session_state["last_uploaded_id"] = board_id
+
+        except Exception as e:
+            import traceback
+            st.error(f"❌ ERROR: {str(e)}")
+            st.code(traceback.format_exc())
+            try:
+                update_embedding_status(board_id, "FAILED", now)
+            except Exception as e2:
+                st.error(f"update status failed: {e2}")
 
         except Exception as e:
             import traceback

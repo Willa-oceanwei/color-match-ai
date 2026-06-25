@@ -145,9 +145,10 @@ def render_upload_page():
             st.success("✅ 上傳完成（Google Sheet + Vector + Image）")
 
         except Exception as e:
+            import traceback
+            st.error(f"❌ ERROR: {str(e)}")
+            st.code(traceback.format_exc())  # 加這行看完整錯誤
             try:
                 update_embedding_status(board_id, "FAILED", now)
             except:
                 pass
-
-            st.error(f"❌ ERROR: {str(e)}")

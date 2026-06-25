@@ -73,6 +73,7 @@ def append_colorboard_row(row: dict):
 def update_embedding_status(board_id: str, status: str, last_update: str):
     ws = _get_colorboard_ws()
     rows = ws.get_all_records()
+    st.write("update 時讀到的 ID =", [r["ID"] for r in rows])  # 加這行
     for i, row in enumerate(rows, start=2):
         if row["ID"] == board_id:
             ws.update(f"G{i}", status)

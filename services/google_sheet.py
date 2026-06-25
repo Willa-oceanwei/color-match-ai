@@ -73,14 +73,12 @@ def append_colorboard_row(row: dict):
 def update_embedding_status(board_id: str, status: str, last_update: str):
     ws = _get_colorboard_ws()
     rows = ws.get_all_records()
-    st.write("update 時讀到的 ID =", [r["ID"] for r in rows])  # 加這行
     for i, row in enumerate(rows, start=2):
         if row["ID"] == board_id:
-            ws.update(f"G{i}", status)
-            ws.update(f"L{i}", last_update)
+            ws.update(f"G{i}", [[status]])            # ← [[value]]
+            ws.update(f"L{i}", [[last_update]])       # ← [[value]]
             return
     raise ValueError(f"找不到 ColorBoard ID：{board_id}")
-
 
 def get_all_colorboards(material: str = None):
     rows = read_colorboard()
@@ -97,7 +95,6 @@ def get_all_colorboards(material: str = None):
 # VECTORS
 # =========================
 def save_vector_to_sheet(board_id: str, material: str, embedding, updated_at: str):
-    import numpy as np
     ws = _get_vectors_ws()
     rows = ws.get_all_records()
 
@@ -107,8 +104,8 @@ def save_vector_to_sheet(board_id: str, material: str, embedding, updated_at: st
 
     for i, row in enumerate(rows, start=2):
         if row["ID"] == board_id:
-            ws.update(f"C{i}", embedding_json)
-            ws.update(f"D{i}", updated_at)
+            ws.update(f"C{i}", [[embedding_json]])   # ← [[value]]
+            ws.update(f"D{i}", [[updated_at]])        # ← [[value]]
             return
 
     ws.append_row(

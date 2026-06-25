@@ -17,11 +17,23 @@ SCOPES = [
 ]
 
 @lru_cache
+import re
+
+@lru_cache
 def _get_client():
     raw = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
-    st.code(f"type: {type(raw)}")
-    st.code(repr(raw[:300]))
-    return None
+    
+    # 只把 private_key 值裡的真實換行換成 \n，其他不動
+    fixed = re.sub(
+        r'("private_key"\s*:\s*")(.*?)(")',
+        lambda m: m.group(1) + m.group(2).replace('\n', '\\n') + m.group(3),
+        raw,
+        flags=re.DOTALL
+    )
+    
+    info = json.loads(fixed)
+    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    return gspread.authorize(creds)
 
 # =========================
 # SHEETS

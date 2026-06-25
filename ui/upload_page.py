@@ -86,7 +86,6 @@ def render_upload_page():
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         create_date = datetime.now().strftime("%Y/%m/%d")
         try:
-            try:
             # =====================
             # STEP 1 IMAGE
             # =====================
@@ -141,15 +140,6 @@ def render_upload_page():
             # =====================
             st.success("✅ 上傳完成（Google Sheet + Vector + Image）")
             st.session_state["last_uploaded_id"] = board_id
-
-        except Exception as e:
-            import traceback
-            st.error(f"❌ ERROR: {str(e)}")
-            st.code(traceback.format_exc())
-            try:
-                update_embedding_status(board_id, "FAILED", now)
-            except Exception as e2:
-                st.error(f"update status failed: {e2}")
 
         except Exception as e:
             import traceback

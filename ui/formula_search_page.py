@@ -60,7 +60,7 @@ def render_formula_search_page():
                 })
 
         if pigment_data:
-            st.markdown("### 🎨 色粉明細")
+            st.markdown("### 🧬 色粉明細")
             st.table(pigment_data)
 
         if f.get("Remark"):

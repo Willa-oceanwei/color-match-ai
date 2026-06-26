@@ -38,22 +38,7 @@ def render_formula_search_page():
 
     st.success(f"找到 {len(matched)} 筆色板")
 
-    # 配方資料
-    formulas = lookup_formula_by_id(formula_id.strip())
-    if formulas:
-        f = formulas[0]
-        st.markdown("### 🧪 配方資料")
-        col_a, col_b, col_c, col_d = st.columns(4)
-        with col_a:
-            st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>添加比例</div><div style='font-size:13px;color:#ffffff;'>{f.get('AddRatio', '-')} g/kg</div>", unsafe_allow_html=True)
-        with col_b:
-            st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>淨重</div><div style='font-size:13px;color:#ffffff;'>{f.get('NetWeight', '-')} g</div>", unsafe_allow_html=True)
-        with col_c:
-            st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>合計類別</div><div style='font-size:13px;color:#ffffff;'>{f.get('TotalType', '-')}</div>", unsafe_allow_html=True)
-        with col_d:
-            st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>Pantone</div><div style='font-size:13px;color:#ffffff;'>{f.get('Pantone', '-')}</div>", unsafe_allow_html=True)
-
-        # 色粉明細
+    # 色粉明細
         pigment_data = []
         for i in range(1, 9):
             p = f.get(f"Pigment{i}", "")
@@ -71,6 +56,23 @@ def render_formula_search_page():
             st.caption(f"備註：{f.get('Remark')}")
 
         st.divider()
+
+    # 配方資料
+    formulas = lookup_formula_by_id(formula_id.strip())
+    if formulas:
+        f = formulas[0]
+        st.markdown("### 🧪 配方資料")
+        col_a, col_b, col_c, col_d = st.columns(4)
+        with col_a:
+            st.markdown(f"<div style='font-size:13px;color:#9fb6cc;'>添加比例</div><div style='font-size:13px;color:#ffffff;'>{f.get('AddRatio', '-')} g/kg</div>", unsafe_allow_html=True)
+        with col_b:
+            st.markdown(f"<div style='font-size:13px;color:#9fb6cc;'>淨重</div><div style='font-size:13px;color:#ffffff;'>{f.get('NetWeight', '-')} g</div>", unsafe_allow_html=True)
+        with col_c:
+            st.markdown(f"<div style='font-size:13px;color:#9fb6cc;'>合計類別</div><div style='font-size:13px;color:#ffffff;'>{f.get('TotalType', '-')}</div>", unsafe_allow_html=True)
+        with col_d:
+            st.markdown(f"<div style='font-size:13px;color:#9fb6cc;'>Pantone</div><div style='font-size:13px;color:#ffffff;'>{f.get('Pantone', '-')}</div>", unsafe_allow_html=True)
+
+        
 
     # 色板圖片
     st.markdown("### 🎨 相關色板")

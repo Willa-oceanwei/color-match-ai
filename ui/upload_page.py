@@ -123,7 +123,7 @@ def render_upload_page():
     extension = Path(uploaded.name).suffix if uploaded else ".jpg"
     image_path = build_image_path(material, board_id, extension)
 
-    st.info("📸 拍攝建議：畫素 200×200 以上，主體色板占畫面 70%，D65光源，背景建議使用灰色底")
+    st.info("📸 拍攝建議：畫素 300×300 以上，主體色板占畫面70%，D65光源，背景建議使用灰色底")
 
     # =========================
     # BUTTON

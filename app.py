@@ -1,18 +1,10 @@
 import traceback
 import os
-print("OS MODULE =", os)
-print("APP START")
 
-try:
-    from ui.upload_page import render_upload_page
-    print("IMPORT OK")
-except Exception as e:
-    print("IMPORT FAILED")
-    print(traceback.format_exc())
-    
 import streamlit as st
 from ui.search_page import render_search_page
 from ui.upload_page import render_upload_page
+from ui.formula_search_page import render_formula_search_page
 
 st.set_page_config(page_title="color-match-ai", page_icon="💡", layout="wide")
 
@@ -123,7 +115,6 @@ ul[role="listbox"] li:hover {
     background: rgba(198,88,47,0.15) !important;
 }
 
-/* page title */
 h1 {
     color: #ffffff !important;
     font-size: 20px !important;
@@ -131,24 +122,20 @@ h1 {
     margin-bottom: 0 !important;
 }
 
-/* header / subheader */
 h2, h3 {
     color: #cfd8e3 !important;
 }
 
-/* caption */
 [data-testid="stCaptionContainer"] p {
     color: #9fb6cc !important;
     font-size: 11px !important;
 }
 
-/* info / warning / success boxes */
 [data-testid="stAlert"] {
     border-radius: 6px !important;
     font-size: 13px !important;
 }
 
-/* label text */
 label, [data-testid="stWidgetLabel"] p {
     color: #9fb6cc !important;
     font-size: 12px !important;
@@ -160,20 +147,18 @@ label, [data-testid="stWidgetLabel"] p {
 # ======== Sidebar Menu ========
 def render_sidebar():
     MENU_ITEMS = [
-        {"group": "色彩", "key": "相似色搜尋", "label": "🔍 相似色搜尋"},
-        {"group": "色彩", "key": "上傳色板",   "label": "⬆️ 上傳色板"},
+        {"group": "色彩", "key": "相似色搜尋",   "label": "🔍 相似色搜尋"},
+        {"group": "色彩", "key": "搜尋配方色板", "label": "🧪 搜尋配方色板"},
+        {"group": "色彩", "key": "上傳色板",     "label": "⬆️ 上傳色板"},
     ]
 
     if "menu" not in st.session_state:
         st.session_state.menu = "相似色搜尋"
 
     with st.sidebar:
-        # 修改 erp-title 的字體大小（例如改為 28px）
         st.markdown("<div class='erp-title' style='font-size: 24px; font-weight: bold;'>Color-Match-AI</div>", unsafe_allow_html=True)
-    
-        # 修改 erp-sub 的字體大小（例如改為 14px）
         st.markdown("<div class='erp-sub' style='font-size: 12px; color: #888888;'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)
-        
+
         current_group = None
         for item in MENU_ITEMS:
             if item["group"] != current_group:
@@ -196,7 +181,11 @@ render_sidebar()
 st.title("Color-Match-AI")
 st.caption("對色案例庫：樣品 → 拍照 → 上傳 → 找最相似色板 → 顯示配方")
 
-if st.session_state.get("menu") == "上傳色板":
+menu = st.session_state.get("menu")
+
+if menu == "上傳色板":
     render_upload_page()
+elif menu == "搜尋配方色板":
+    render_formula_search_page()
 else:
     render_search_page()

@@ -78,33 +78,33 @@ def render_formula_search_page():
         with col_a:
             st.markdown(
                 f"<div style='font-size:13px;color:#9fb6cc;'>添加比例</div>"
-                f"<div style='font-size:13px;color:#ffffff;'>{f.get('AddRatio', '-')} g/kg</div>",
+                f"<div style='font-size:15px;color:#ffffff;'>{f.get('AddRatio', '-')} g/kg</div>",
                 unsafe_allow_html=True
             )
 
         with col_b:
             st.markdown(
                 f"<div style='font-size:13px;color:#9fb6cc;'>淨重</div>"
-                f"<div style='font-size:13px;color:#ffffff;'>{f.get('NetWeight', '-')} g</div>",
+                f"<div style='font-size:15px;color:#ffffff;'>{f.get('NetWeight', '-')} g</div>",
                 unsafe_allow_html=True
             )
 
         with col_c:
             st.markdown(
                 f"<div style='font-size:13px;color:#9fb6cc;'>合計類別</div>"
-                f"<div style='font-size:13px;color:#ffffff;'>{f.get('TotalType', '-')}</div>",
+                f"<div style='font-size:15px;color:#ffffff;'>{f.get('TotalType', '-')}</div>",
                 unsafe_allow_html=True
             )
 
         with col_d:
             st.markdown(
                 f"<div style='font-size:13px;color:#9fb6cc;'>Pantone</div>"
-                f"<div style='font-size:13px;color:#ffffff;'>{f.get('Pantone', '-')}</div>",
+                f"<div style='font-size:15px;color:#ffffff;'>{f.get('Pantone', '-')}</div>",
                 unsafe_allow_html=True
             )
 
     # 色板圖片
-    st.markdown("### 🎨 相關色板")
+    st.markdown("### 🃏 相關色板")
 
     cols = st.columns(3)
 

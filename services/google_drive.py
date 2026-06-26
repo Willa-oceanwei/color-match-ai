@@ -7,11 +7,10 @@ from config import SETTINGS
 
 
 def _image_to_base64(content: bytes) -> str:
-    # 壓縮到 200x200 再轉 base64
     img = Image.open(io.BytesIO(content)).convert("RGB")
-    img.thumbnail((200, 200))
+    img.thumbnail((300, 300))
     buffer = io.BytesIO()
-    img.save(buffer, format="JPEG", quality=70)
+    img.save(buffer, format="JPEG", quality=80)
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 

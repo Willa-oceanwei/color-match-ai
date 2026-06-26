@@ -71,8 +71,6 @@ def render_formula_search_page():
         # =====================
         # 配方資料（後顯示）
         # =====================
-        st.markdown("### 🧪 配方資料")
-
         col_a, col_b, col_c, col_d = st.columns(4)
 
         with col_a:
@@ -104,8 +102,6 @@ def render_formula_search_page():
             )
 
     # 色板圖片
-    st.markdown("### 🃏 相關色板")
-
     cols = st.columns(3)
 
     for i, row in enumerate(matched):

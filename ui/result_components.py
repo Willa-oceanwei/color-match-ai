@@ -64,13 +64,13 @@ def render_result_card(index: int, result: dict):
                     # 基本資料
                     col_a, col_b, col_c, col_d = st.columns(4)
                     with col_a:
-                        st.metric("添加比例", f"{f.get('AddRatio', '-')} g/kg")
+                        st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>添加比例</div><div style='font-size:13px;color:#ffffff;'>{f.get('AddRatio', '-')} g/kg</div>", unsafe_allow_html=True)
                     with col_b:
-                        st.metric("淨重", f"{f.get('NetWeight', '-')} g")
+                        st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>淨重</div><div style='font-size:13px;color:#ffffff;'>{f.get('NetWeight', '-')} g</div>", unsafe_allow_html=True)
                     with col_c:
-                        st.metric("合計類別", f.get("TotalType", "-"))
+                        st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>合計類別</div><div style='font-size:13px;color:#ffffff;'>{f.get('TotalType', '-')}</div>", unsafe_allow_html=True)
                     with col_d:
-                        st.metric("Pantone", f.get("Pantone", "-"))
+                        st.markdown(f"<div style='font-size:11px;color:#9fb6cc;'>Pantone</div><div style='font-size:13px;color:#ffffff;'>{f.get('Pantone', '-')}</div>", unsafe_allow_html=True)
 
                     # 色粉資料
                     st.markdown("**色粉明細**")

@@ -6,7 +6,12 @@ from ui.search_page import render_search_page
 from ui.upload_page import render_upload_page
 from ui.formula_search_page import render_formula_search_page
 
-st.set_page_config(page_title="color-match-ai", page_icon="💡", layout="wide")
+st.set_page_config(
+    page_title="color-match-ai",
+    page_icon="💡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # ======== 🚀 Modern Style ========
 def apply_modern_style():

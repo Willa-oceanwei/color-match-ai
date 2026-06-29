@@ -23,34 +23,27 @@ def _base64_to_image(b64: str):
 
 def render_edit_page():
     st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold;'>✏️ 修改色板資料</h2>",
+        "<h2 style='font-size: 24px; font-weight: bold;'>修改色板資料</h2>",
         unsafe_allow_html=True
     )
 
     # =========================
     # 查詢
     # =========================
-    col1, col2 = st.columns(2)
-    with col1:
-        search_id = st.text_input("輸入 ID", placeholder="例如：TPR_52824")
-    with col2:
-        search_formula = st.text_input("或輸入 FormulaID", placeholder="例如：52824")
+    search_formula = st.text_input("輸入 FormulaID", placeholder="例如：52824")
 
     if st.button("🔍 查詢"):
         st.session_state.pop("edit_target", None)
-        if search_id.strip():
-            row = get_colorboard_by_id(search_id.strip())
-            if row:
-                st.session_state["edit_target"] = row
-            else:
-                st.error(f"找不到 ID：{search_id}")
-        elif search_formula.strip():
+        st.session_state.pop("edit_targets", None)
+        if search_formula.strip():
             rows = get_colorboards_by_formula_id(search_formula.strip())
             if rows:
                 st.session_state["edit_targets"] = rows
                 st.session_state["edit_target"] = rows[0]
             else:
                 st.error(f"找不到 FormulaID：{search_formula}")
+        else:
+            st.warning("請輸入 FormulaID")
 
     # 如果 FormulaID 查到多筆，讓使用者選
     if "edit_targets" in st.session_state and len(st.session_state["edit_targets"]) > 1:

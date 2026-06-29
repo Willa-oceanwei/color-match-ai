@@ -156,6 +156,7 @@ def render_sidebar():
         {"group": "色彩", "key": "相似色搜尋",   "label": "🔍 相似色搜尋"},
         {"group": "色彩", "key": "搜尋配方色板", "label": "🧪 搜尋配方色板"},
         {"group": "色彩", "key": "上傳色板",     "label": "⬆️ 上傳色板"},
+        {"group": "色彩", "key": "修改色板資料", "label": "✏️ 修改色板資料"},
     ]
 
     if "menu" not in st.session_state:

@@ -80,6 +80,47 @@ def update_embedding_status(board_id: str, status: str, last_update: str):
             return
     raise ValueError(f"找不到 ColorBoard ID：{board_id}")
 
+def get_colorboard_by_id(board_id: str) -> dict | None:
+    rows = read_colorboard()
+    for row in rows:
+        if row["ID"] == board_id:
+            return row
+    return None
+
+def get_colorboards_by_formula_id(formula_id: str) -> list:
+    rows = read_colorboard()
+    return [
+        r for r in rows
+        if str(r.get("FormulaID", "")).strip() == str(formula_id).strip()
+    ]
+
+def update_colorboard_row(board_id: str, updates: dict):
+    ws = _get_colorboard_ws()
+    rows = ws.get_all_records()
+    col_map = {
+        "Material":        "B",
+        "ImagePath":       "C",
+        "FormulaID":       "D",
+        "FormulaMode":     "E",
+        "RecipeStatus":    "F",
+        "EmbeddingStatus": "G",
+        "Customer":        "H",
+        "ColorName":       "I",
+        "Pantone":         "J",
+        "CreateDate":      "K",
+        "LastUpdate":      "L",
+        "Remark":          "M",
+        "ImageBase64":     "N",
+    }
+    for i, row in enumerate(rows, start=2):
+        if row["ID"] == board_id:
+            for key, val in updates.items():
+                col = col_map.get(key)
+                if col:
+                    ws.update(f"{col}{i}", [[val]])
+            return
+    raise ValueError(f"找不到 ColorBoard ID：{board_id}")
+
 def get_all_colorboards(material: str = None):
     rows = read_colorboard()
     if material:

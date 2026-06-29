@@ -194,5 +194,7 @@ if menu == "上傳色板":
     render_upload_page()
 elif menu == "搜尋配方色板":
     render_formula_search_page()
+elif menu == "修改色板資料":
+    render_edit_page()
 else:
     render_search_page()

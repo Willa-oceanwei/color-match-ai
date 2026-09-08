@@ -33,11 +33,9 @@ def render_formula_search_page():
         st.markdown("### 最近新增的色板")
         try:
             recent_rows = get_recent_color_match_boards(limit=20)
-        except Exception:
-            st.warning(
-                "暫時無法載入最近新增紀錄，可能正在同步 Turso。"
-                "您仍可在上方輸入配方編號查詢，或稍後重新整理。"
-            )
+        except Exception as error:
+            st.error("無法讀取色板資料庫；這不是正常的同步等待。")
+            st.caption(f"診斷訊息：{error}")
             return
 
         if recent_rows:
@@ -68,8 +66,9 @@ def render_formula_search_page():
         if not matched:
             board = get_color_match_board_by_id(search_id)
             matched = [board] if board else []
-    except Exception:
-        st.error("配方色板暫時無法讀取，可能正在同步 Turso，請稍後再試。")
+    except Exception as error:
+        st.error("無法讀取色板資料庫；這不是正常的同步等待。")
+        st.caption(f"診斷訊息：{error}")
         return
 
     if not matched:

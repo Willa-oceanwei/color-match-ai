@@ -19,6 +19,23 @@ COLOR_MATCH_COLUMNS = (
     "ImageBase64",
 )
 
+COLOR_MATCH_SCHEMA = {
+    "id": "TEXT",
+    "material": "TEXT",
+    "image_path": "TEXT",
+    "formula_id": "TEXT",
+    "formula_mode": "TEXT",
+    "recipe_status": "TEXT",
+    "embedding_status": "TEXT",
+    "customer": "TEXT",
+    "color_name": "TEXT",
+    "pantone": "TEXT",
+    "create_date": "TEXT",
+    "last_update": "TEXT",
+    "remark": "TEXT",
+    "image_base64": "TEXT",
+}
+
 
 def get_turso_client():
     url = st.secrets["TURSO_DATABASE_URL"]
@@ -33,29 +50,43 @@ def get_turso_client():
 
 def init_color_match_tables():
     conn = get_turso_client()
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS color_match_boards (
+                id TEXT PRIMARY KEY,
+                material TEXT,
+                image_path TEXT,
+                formula_id TEXT,
+                formula_mode TEXT,
+                recipe_status TEXT,
+                embedding_status TEXT,
+                customer TEXT,
+                color_name TEXT,
+                pantone TEXT,
+                create_date TEXT,
+                last_update TEXT,
+                remark TEXT,
+                image_base64 TEXT
+            )
+        """)
 
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS color_match_boards (
-            id TEXT PRIMARY KEY,
-            material TEXT,
-            image_path TEXT,
-            formula_id TEXT,
-            formula_mode TEXT,
-            recipe_status TEXT,
-            embedding_status TEXT,
-            customer TEXT,
-            color_name TEXT,
-            pantone TEXT,
-            create_date TEXT,
-            last_update TEXT,
-            remark TEXT,
-            image_base64 TEXT
-        )
-    """)
+        # CREATE TABLE IF NOT EXISTS does not add columns to databases created
+        # by older deployments. Migrate those databases before any SELECT tries
+        # to read newer fields such as image_base64.
+        existing_columns = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(color_match_boards)").rows
+        }
+        for column, column_type in COLOR_MATCH_SCHEMA.items():
+            if column not in existing_columns:
+                conn.execute(
+                    f"ALTER TABLE color_match_boards ADD COLUMN {column} {column_type}"
+                )
 
-    conn.commit()
-    conn.sync()
-    conn.close()
+        conn.commit()
+        conn.sync()
+    finally:
+        conn.close()
 
 
 def append_color_match_board(row: dict):

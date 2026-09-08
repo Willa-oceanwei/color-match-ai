@@ -43,8 +43,9 @@ def render_edit_page():
                 if not rows:
                     board = get_color_match_board_by_id(search_formula.strip())
                     rows = [board] if board else []
-            except Exception:
-                st.error("色板資料暫時無法讀取，可能正在同步 Turso，請稍後再試。")
+            except Exception as error:
+                st.error("無法讀取色板資料庫；這不是正常的同步等待。")
+                st.caption(f"診斷訊息：{error}")
                 return
             if rows:
                 st.session_state["edit_targets"] = rows

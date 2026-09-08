@@ -33,6 +33,20 @@ class FakeConnection:
         self.events.append("commit")
 
 
+class SchemaConnection(FakeConnection):
+    def __init__(self, columns):
+        super().__init__([])
+        self.columns = columns
+        self.queries = []
+
+    def execute(self, query, params=()):
+        self.events.append("execute")
+        self.queries.append(query)
+        if query.startswith("PRAGMA"):
+            return FakeResult([(index, column) for index, column in enumerate(self.columns)])
+        return FakeResult([])
+
+
 def _row(formula_id="52824"):
     return (
         "ABS_52824", "ABS", "ABS/image.jpg", formula_id, "EXISTING",
@@ -96,3 +110,18 @@ def test_get_color_match_board_by_id_returns_first_match(monkeypatch):
 
     assert result["ID"] == "ABS_52824"
     assert connection.params == ("ABS_52824", 1)
+
+
+def test_init_adds_columns_missing_from_an_existing_database(monkeypatch):
+    old_columns = set(turso_db.COLOR_MATCH_SCHEMA) - {"image_base64", "last_update"}
+    connection = SchemaConnection(old_columns)
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    turso_db.init_color_match_tables()
+
+    alter_queries = [query for query in connection.queries if query.startswith("ALTER")]
+    assert set(alter_queries) == {
+        "ALTER TABLE color_match_boards ADD COLUMN image_base64 TEXT",
+        "ALTER TABLE color_match_boards ADD COLUMN last_update TEXT",
+    }
+    assert connection.events[-3:] == ["commit", "sync", "close"]

@@ -145,6 +145,57 @@ def append_color_match_board(row: dict):
     conn.close()
 
 
+def import_color_match_boards(rows: list[dict]):
+    """Import legacy Sheet rows without overwriting records already in Turso."""
+    conn = get_turso_client()
+    inserted = 0
+    skipped = 0
+    try:
+        for row in rows:
+            board_id = str(row.get("ID", "") or "").strip()
+            if not board_id:
+                skipped += 1
+                continue
+
+            cursor = conn.execute(
+                """
+                INSERT INTO color_match_boards (
+                    id, material, image_path, formula_id, formula_mode,
+                    recipe_status, embedding_status, customer, color_name,
+                    pantone, create_date, last_update, remark, image_base64
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING
+                """,
+                (
+                    board_id,
+                    row.get("Material", ""),
+                    row.get("ImagePath", ""),
+                    row.get("FormulaID", ""),
+                    row.get("FormulaMode", ""),
+                    row.get("RecipeStatus", ""),
+                    row.get("EmbeddingStatus", ""),
+                    row.get("Customer", ""),
+                    row.get("ColorName", ""),
+                    row.get("Pantone", ""),
+                    row.get("CreateDate", ""),
+                    row.get("LastUpdate", ""),
+                    row.get("Remark", ""),
+                    row.get("ImageBase64", ""),
+                ),
+            )
+            if getattr(cursor, "rowcount", 1) == 0:
+                skipped += 1
+            else:
+                inserted += 1
+
+        conn.commit()
+        conn.sync()
+        return {"inserted": inserted, "skipped": skipped, "total": len(rows)}
+    finally:
+        conn.close()
+
+
 def update_color_match_embedding_status(
     board_id: str,
     status: str,

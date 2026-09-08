@@ -8,8 +8,9 @@ class FakeResult:
 
 
 class FakeDbApiCursor:
-    def __init__(self, rows):
+    def __init__(self, rows, rowcount=1):
         self._rows = rows
+        self.rowcount = rowcount
 
     def fetchall(self):
         return self._rows
@@ -170,4 +171,30 @@ def test_init_supports_db_api_cursor_without_rows_attribute(monkeypatch):
     turso_db.init_color_match_tables()
 
     assert not [query for query in connection.queries if query.startswith("ALTER")]
+    assert connection.events[-3:] == ["commit", "sync", "close"]
+
+
+def test_import_legacy_boards_skips_existing_and_blank_ids(monkeypatch):
+    class ImportConnection(FakeConnection):
+        def __init__(self):
+            super().__init__([])
+            self.calls = []
+
+        def execute(self, query, params=()):
+            self.events.append("execute")
+            self.calls.append((query, params))
+            return FakeDbApiCursor([], rowcount=0 if params[0] == "EXISTING" else 1)
+
+    connection = ImportConnection()
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.import_color_match_boards([
+        {"ID": "OLD_1", "FormulaID": "10001", "Material": "ABS"},
+        {"ID": "EXISTING", "FormulaID": "10002", "Material": "PP"},
+        {"ID": "", "FormulaID": "10003", "Material": "PC"},
+    ])
+
+    assert result == {"inserted": 1, "skipped": 2, "total": 3}
+    assert len(connection.calls) == 2
+    assert "ON CONFLICT(id) DO NOTHING" in connection.calls[0][0]
     assert connection.events[-3:] == ["commit", "sync", "close"]

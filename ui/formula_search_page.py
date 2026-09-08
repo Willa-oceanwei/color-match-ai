@@ -3,10 +3,12 @@ import base64
 import io
 from PIL import Image
 from services.google_sheet import lookup_formula_by_id
+from services.google_sheet import read_colorboard
 from services.turso_db import (
     get_color_match_board_by_id,
     get_color_match_boards_by_formula_id,
     get_recent_color_match_boards,
+    import_color_match_boards,
 )
 
 def _base64_to_image(b64: str):
@@ -27,6 +29,21 @@ def render_formula_search_page():
         "輸入配方編號或色板 ID",
         placeholder="例如：52824 或 ABS_TRIAL_20260908_143000",
     )
+
+    with st.expander("📥 匯入 Google Sheet 舊色板"):
+        st.caption("只補進 Turso 尚未存在的色板 ID，不會覆蓋目前資料。")
+        if st.button("開始匯入舊色板", type="secondary"):
+            try:
+                with st.spinner("正在讀取 Google Sheet 並匯入 Turso…"):
+                    sheet_rows = read_colorboard()
+                    migration = import_color_match_boards(sheet_rows)
+                st.success(
+                    f"匯入完成：新增 {migration['inserted']} 筆、"
+                    f"略過 {migration['skipped']} 筆，共檢查 {migration['total']} 筆。"
+                )
+            except Exception as error:
+                st.error("Google Sheet 舊資料匯入失敗。")
+                st.caption(f"診斷訊息：{error}")
 
     if not search_id.strip():
         st.info("請輸入配方編號或色板 ID，也可從下方最近新增紀錄確認。")

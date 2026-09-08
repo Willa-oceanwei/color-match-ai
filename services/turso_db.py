@@ -37,6 +37,14 @@ COLOR_MATCH_SCHEMA = {
 }
 
 
+def _fetch_rows(cursor):
+    """Return query rows for both DB-API cursors and legacy libsql results."""
+    fetchall = getattr(cursor, "fetchall", None)
+    if callable(fetchall):
+        return fetchall()
+    return getattr(cursor, "rows", cursor)
+
+
 def get_turso_client():
     url = st.secrets["TURSO_DATABASE_URL"]
     auth_token = st.secrets["TURSO_AUTH_TOKEN"]
@@ -75,7 +83,9 @@ def init_color_match_tables():
         # to read newer fields such as image_base64.
         existing_columns = {
             row[1]
-            for row in conn.execute("PRAGMA table_info(color_match_boards)").rows
+            for row in _fetch_rows(
+                conn.execute("PRAGMA table_info(color_match_boards)")
+            )
         }
         for column, column_type in COLOR_MATCH_SCHEMA.items():
             if column not in existing_columns:
@@ -214,8 +224,8 @@ def _read_color_match_boards(where_clause="", params=(), limit=None):
             query += " LIMIT ?"
             query_params.append(limit)
 
-        result = conn.execute(query, tuple(query_params))
-        return _rows_to_color_match_boards(result.rows)
+        cursor = conn.execute(query, tuple(query_params))
+        return _rows_to_color_match_boards(_fetch_rows(cursor))
     finally:
         conn.close()
 
@@ -273,11 +283,14 @@ def update_color_match_board(board_id: str, updates: dict):
         assignments = ", ".join(f"{column} = ?" for column, _ in valid_updates)
         params = [value for _, value in valid_updates]
         params.append(str(board_id).strip())
-        result = conn.execute(
+        cursor = conn.execute(
             f"UPDATE color_match_boards SET {assignments} WHERE id = ?",
             tuple(params),
         )
-        if getattr(result, "rows_affected", 1) == 0:
+        affected_rows = getattr(cursor, "rowcount", None)
+        if affected_rows is None:
+            affected_rows = getattr(cursor, "rows_affected", 1)
+        if affected_rows == 0:
             raise ValueError(f"找不到 ColorBoard ID：{board_id}")
         conn.commit()
         conn.sync()

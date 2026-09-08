@@ -7,6 +7,14 @@ class FakeResult:
         self.rows_affected = 1
 
 
+class FakeDbApiCursor:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def fetchall(self):
+        return self._rows
+
+
 class FakeConnection:
     def __init__(self, rows, sync_error=None):
         self.rows = rows
@@ -47,6 +55,24 @@ class SchemaConnection(FakeConnection):
         return FakeResult([])
 
 
+class DbApiSchemaConnection(SchemaConnection):
+    def execute(self, query, params=()):
+        self.events.append("execute")
+        self.queries.append(query)
+        if query.startswith("PRAGMA"):
+            rows = [(index, column) for index, column in enumerate(self.columns)]
+            return FakeDbApiCursor(rows)
+        return FakeDbApiCursor([])
+
+
+class DbApiReadConnection(FakeConnection):
+    def execute(self, query, params=()):
+        self.events.append("execute")
+        self.query = query
+        self.params = params
+        return FakeDbApiCursor(self.rows)
+
+
 def _row(formula_id="52824"):
     return (
         "ABS_52824", "ABS", "ABS/image.jpg", formula_id, "EXISTING",
@@ -65,6 +91,16 @@ def test_formula_lookup_syncs_replica_and_maps_result(monkeypatch):
     assert connection.params == ("52824",)
     assert result[0]["FormulaID"] == "52824"
     assert result[0]["ColorName"] == "Red"
+
+
+def test_formula_lookup_supports_db_api_cursor(monkeypatch):
+    connection = DbApiReadConnection([_row()])
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.get_color_match_boards_by_formula_id("52824")
+
+    assert result[0]["FormulaID"] == "52824"
+    assert connection.events == ["sync", "execute", "close"]
 
 
 def test_recent_boards_includes_rows_without_formula_and_bounds_limit(monkeypatch):
@@ -124,4 +160,14 @@ def test_init_adds_columns_missing_from_an_existing_database(monkeypatch):
         "ALTER TABLE color_match_boards ADD COLUMN image_base64 TEXT",
         "ALTER TABLE color_match_boards ADD COLUMN last_update TEXT",
     }
+    assert connection.events[-3:] == ["commit", "sync", "close"]
+
+
+def test_init_supports_db_api_cursor_without_rows_attribute(monkeypatch):
+    connection = DbApiSchemaConnection(turso_db.COLOR_MATCH_SCHEMA)
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    turso_db.init_color_match_tables()
+
+    assert not [query for query in connection.queries if query.startswith("ALTER")]
     assert connection.events[-3:] == ["commit", "sync", "close"]

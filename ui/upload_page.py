@@ -234,6 +234,6 @@ def render_upload_page():
             st.error(f"❌ ERROR: {str(e)}")
             st.code(traceback.format_exc())
             try:
-                update_embedding_status(board_id, "FAILED", now)
+                update_color_match_embedding_status(board_id, "FAILED", now)
             except Exception as e2:
                 st.error(f"update status failed: {e2}")

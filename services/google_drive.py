@@ -8,11 +8,17 @@ from config import SETTINGS
 
 def _image_to_base64(content: bytes) -> str:
     img = Image.open(io.BytesIO(content)).convert("RGB")
-    img.thumbnail((300, 300))
-    buffer = io.BytesIO()
-    img.save(buffer, format="JPEG", quality=80)
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    img.thumbnail((800, 800))
 
+    buffer = io.BytesIO()
+    img.save(
+        buffer,
+        format="JPEG",
+        quality=85,
+        optimize=True
+    )
+
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 def write_uploaded_bytes(content: bytes, image_path: str) -> str:
     # 本地暫存（Streamlit Cloud 重啟會消失，但上傳當下 embed_image 還用得到）

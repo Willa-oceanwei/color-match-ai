@@ -26,8 +26,16 @@ def render_formula_search_page():
 
     if not formula_id.strip():
         st.info("請輸入配方編號，或從下方最近新增紀錄確認編號。")
-        recent_rows = get_recent_color_match_boards(limit=20)
         st.markdown("### 最近新增的配方色板")
+        try:
+            recent_rows = get_recent_color_match_boards(limit=20)
+        except Exception:
+            st.warning(
+                "暫時無法載入最近新增紀錄，可能正在同步 Turso。"
+                "您仍可在上方輸入配方編號查詢，或稍後重新整理。"
+            )
+            return
+
         if recent_rows:
             st.dataframe(
                 [
@@ -50,7 +58,11 @@ def render_formula_search_page():
         return
 
     # 直接查詢 Turso，讀取前會同步遠端資料，避免過渡期間讀到舊副本。
-    matched = get_color_match_boards_by_formula_id(formula_id)
+    try:
+        matched = get_color_match_boards_by_formula_id(formula_id)
+    except Exception:
+        st.error("配方色板暫時無法讀取，可能正在同步 Turso，請稍後再試。")
+        return
 
     if not matched:
         st.warning(f"查無配方編號：{formula_id}")

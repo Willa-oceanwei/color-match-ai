@@ -7,14 +7,17 @@ class FakeResult:
 
 
 class FakeConnection:
-    def __init__(self, rows):
+    def __init__(self, rows, sync_error=None):
         self.rows = rows
+        self.sync_error = sync_error
         self.events = []
         self.query = ""
         self.params = ()
 
     def sync(self):
         self.events.append("sync")
+        if self.sync_error:
+            raise self.sync_error
 
     def execute(self, query, params=()):
         self.events.append("execute")
@@ -54,3 +57,13 @@ def test_recent_formula_boards_uses_bounded_limit(monkeypatch):
 
     assert "TRIM(formula_id) != ''" in connection.query
     assert connection.params == (100,)
+
+
+def test_read_uses_local_replica_when_sync_temporarily_fails(monkeypatch):
+    connection = FakeConnection([_row()], sync_error=RuntimeError("offline"))
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.get_color_match_boards_by_formula_id("52824")
+
+    assert connection.events == ["sync", "execute", "close"]
+    assert result[0]["FormulaID"] == "52824"

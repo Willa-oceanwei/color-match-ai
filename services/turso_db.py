@@ -134,12 +134,28 @@ def _rows_to_color_match_boards(rows):
     return [dict(zip(COLOR_MATCH_COLUMNS, row)) for row in rows]
 
 
+def _sync_replica(conn):
+    """Best-effort sync without making local reads unavailable."""
+    sync = getattr(conn, "sync", None)
+    if not callable(sync):
+        return False
+
+    try:
+        sync()
+        return True
+    except Exception:
+        # Turso may be temporarily unreachable during migration. The embedded
+        # replica can still contain useful data, so continue with the local read.
+        return False
+
+
 def _read_color_match_boards(where_clause="", params=(), limit=None):
     conn = get_turso_client()
     try:
         # Pull remote writes before reading the embedded replica. This is important
-        # while multiple Streamlit instances are writing to Turso.
-        conn.sync()
+        # while multiple Streamlit instances are writing to Turso. If Turso is
+        # temporarily unavailable, continue with the local replica instead.
+        _sync_replica(conn)
 
         query = """
         SELECT
@@ -171,6 +187,7 @@ def _read_color_match_boards(where_clause="", params=(), limit=None):
         return _rows_to_color_match_boards(result.rows)
     finally:
         conn.close()
+
 
 def get_all_color_match_boards():
     return _read_color_match_boards()

@@ -1,21 +1,22 @@
 import streamlit as st
-from libsql_client import create_client_sync
+import libsql
 
 
 def get_turso_client():
     url = st.secrets["TURSO_DATABASE_URL"]
     auth_token = st.secrets["TURSO_AUTH_TOKEN"]
 
-    return create_client_sync(
-        url=url,
+    return libsql.connect(
+        "color_match_local.db",
+        sync_url=url,
         auth_token=auth_token,
     )
 
 
 def init_color_match_tables():
-    client = get_turso_client()
+    conn = get_turso_client()
 
-    client.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS color_match_boards (
             id TEXT PRIMARY KEY,
             material TEXT,
@@ -34,4 +35,6 @@ def init_color_match_tables():
         )
     """)
 
-    client.close()
+    conn.commit()
+    conn.sync()
+    conn.close()

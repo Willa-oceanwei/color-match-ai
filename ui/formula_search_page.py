@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 import io
 from PIL import Image
-from ui.design import render_page_header
+from ui.design import format_quantity, render_page_header
 from services.google_sheet import read_colorboard
 from services.formula_repository import lookup_formula_by_id
 from services.turso_db import (
@@ -156,7 +156,7 @@ def render_formula_search_page():
             if p:
                 pigment_data.append({
                     "色粉編號": p,
-                    "重量 (g)": w
+                    "重量 (g)": format_quantity(w)
                 })
 
         if pigment_data:

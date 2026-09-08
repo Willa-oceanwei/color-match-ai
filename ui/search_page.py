@@ -14,9 +14,12 @@ def render_search_page():
     )
 
     material = st.selectbox(
-        "Material",
-        ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS"]
+        "原料範圍",
+        ["ALL", "PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS"],
+        format_func=lambda value: "不限原料（只比顏色）" if value == "ALL" else value,
     )
+    if material == "ALL":
+        st.caption("將跨原料搜尋；結果以顏色相近程度排序。")
 
     uploaded = st.file_uploader(
         "上傳樣品",

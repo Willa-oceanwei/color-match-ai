@@ -3,6 +3,7 @@ import base64
 import io
 from PIL import Image
 from services.formula_repository import lookup_formula_by_id
+from ui.design import format_quantity
 
 
 def _base64_to_image(b64: str):
@@ -15,9 +16,9 @@ def _base64_to_image(b64: str):
 
 def render_result_card(index: int, result: dict):
     score = result["score"]
-    if score > 0.92:
+    if score > 0.85:
         color = "🟢"
-    elif score > 0.85:
+    elif score > 0.70:
         color = "🟡"
     else:
         color = "🔴"
@@ -81,7 +82,7 @@ def render_result_card(index: int, result: dict):
                         if p:
                             pigment_data.append({
                                 "色粉編號": p,
-                                "重量 (g)": w
+                                "重量 (g)": format_quantity(w)
                             })
 
                     if pigment_data:

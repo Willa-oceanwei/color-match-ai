@@ -107,6 +107,52 @@ def update_color_match_embedding_status(
         ),
     )
 
+def get_all_color_match_boards():
+    conn = get_turso_client()
+
+    result = conn.execute("""
+        SELECT
+            id,
+            material,
+            image_path,
+            formula_id,
+            formula_mode,
+            recipe_status,
+            embedding_status,
+            customer,
+            color_name,
+            pantone,
+            create_date,
+            last_update,
+            remark,
+            image_base64
+        FROM color_match_boards
+        ORDER BY rowid DESC
+    """)
+
+    rows = []
+
+    for r in result.rows:
+        rows.append({
+            "ID": r[0],
+            "Material": r[1],
+            "ImagePath": r[2],
+            "FormulaID": r[3],
+            "FormulaMode": r[4],
+            "RecipeStatus": r[5],
+            "EmbeddingStatus": r[6],
+            "Customer": r[7],
+            "ColorName": r[8],
+            "Pantone": r[9],
+            "CreateDate": r[10],
+            "LastUpdate": r[11],
+            "Remark": r[12],
+            "ImageBase64": r[13],
+        })
+
+    conn.close()
+    return rows
+
     conn.commit()
     conn.sync()
     conn.close()

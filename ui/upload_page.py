@@ -259,7 +259,7 @@ def render_upload_page():
             # =====================
             # STEP 2 TURSO
             # =====================
-            formula_mode = resolve_formula_mode(
+            formula_resolution = resolve_formula_mode(
                 formula_id
             )
 
@@ -268,7 +268,7 @@ def render_upload_page():
                 "FormulaID": formula_id.strip(),
                 "Material": normalize_material(material),
                 "ImagePath": image_path,
-                "FormulaMode": str(formula_mode),
+                "FormulaMode": formula_resolution.formula_mode,
                 "RecipeStatus": recipe_status,
                 "EmbeddingStatus": "PROCESSING",
                 "Customer": customer,
@@ -414,6 +414,14 @@ def render_upload_page():
             st.success(
                 "✅ 上傳完成（Turso + Vector + Image）"
             )
+
+            if formula_id.strip():
+                st.info(
+                    f"配方編號：**{formula_id.strip()}**　｜　"
+                    f"色板 ID：**{board_id}**"
+                )
+            else:
+                st.info(f"本次未填配方編號　｜　色板 ID：**{board_id}**")
 
             st.session_state[
                 "last_uploaded_id"

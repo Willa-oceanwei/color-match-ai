@@ -221,7 +221,7 @@ def render_upload_page():
                 "recipe_status": recipe_status
             }, embedding, now)
 
-            update_embedding_status(board_id, "Y", now)
+            update_color_match_embedding_status(board_id, "Y", now)
 
             # =====================
             # DONE

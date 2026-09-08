@@ -1,17 +1,19 @@
 import streamlit as st
 from datetime import datetime
-from services.google_sheet import (
-    get_colorboard_by_id,
-    get_colorboards_by_formula_id,
-    update_colorboard_row,
-    append_formula_row,
-    lookup_formula_by_id,
+from services.google_sheet import append_formula_row
+from services.formula_repository import lookup_formula_by_id
+from services.turso_db import (
+    get_color_match_board_by_id,
+    get_color_match_boards_by_formula_id,
+    search_color_match_boards,
+    update_color_match_board,
 )
 from services.embedding_service import embed_image, upsert_embedding
 from services.google_drive import write_uploaded_bytes_get_base64, resolve_local_image_path
 import base64
 import io
 from PIL import Image
+from ui.design import render_page_header
 
 
 def _base64_to_image(b64: str):
@@ -22,38 +24,53 @@ def _base64_to_image(b64: str):
 
 
 def render_edit_page():
-    st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold;'>修改色板資料</h2>",
-        unsafe_allow_html=True
+    render_page_header(
+        "✏️", "BOARD EDITOR", "修改色板資料",
+        "搜尋既有色板後，更新基本資料、配方內容或照片。",
     )
 
     # =========================
     # 查詢
     # =========================
-    search_formula = st.text_input("輸入 FormulaID", placeholder="例如：52824")
+    search_formula = st.text_input(
+        "搜尋 FormulaID、色板 ID、公司名稱或顏色",
+        placeholder="例如：52824、公司名稱或紅色",
+    )
 
     if st.button("🔍 查詢"):
         st.session_state.pop("edit_target", None)
         st.session_state.pop("edit_targets", None)
         if search_formula.strip():
-            rows = get_colorboards_by_formula_id(search_formula.strip())
+            try:
+                rows = get_color_match_boards_by_formula_id(search_formula.strip())
+                if not rows:
+                    board = get_color_match_board_by_id(search_formula.strip())
+                    rows = [board] if board else []
+                if not rows:
+                    rows = search_color_match_boards(search_formula.strip())
+            except Exception as error:
+                st.error("無法讀取色板資料庫；這不是正常的同步等待。")
+                st.caption(f"診斷訊息：{error}")
+                return
             if rows:
                 st.session_state["edit_targets"] = rows
                 st.session_state["edit_target"] = rows[0]
             else:
-                st.error(f"找不到 FormulaID：{search_formula}")
+                st.error(f"找不到配方、色板、公司或顏色：{search_formula}")
         else:
-            st.warning("請輸入 FormulaID")
+            st.warning("請輸入 FormulaID、色板 ID、公司名稱或顏色")
 
     # 如果 FormulaID 查到多筆，讓使用者選
     if "edit_targets" in st.session_state and len(st.session_state["edit_targets"]) > 1:
         targets = st.session_state["edit_targets"]
-        options = [r["ID"] for r in targets]
+        options = [
+            f"{r.get('ColorName', '') or '未填顏色'}（料號："
+            f"{r.get('FormulaID', '') or r['ID']}）｜{r['ID']}"
+            for r in targets
+        ]
         selected = st.selectbox("找到多筆，請選擇要編輯的 ID", options)
-        for r in targets:
-            if r["ID"] == selected:
-                st.session_state["edit_target"] = r
-                break
+        selected_index = options.index(selected)
+        st.session_state["edit_target"] = targets[selected_index]
 
     if "edit_target" not in st.session_state:
         return
@@ -102,7 +119,11 @@ def render_edit_page():
     # 配方資料
     # =========================
     st.markdown("### 🧪 配方資料（選填）")
-    existing_formula = lookup_formula_by_id(str(row.get("FormulaID", "")))
+    try:
+        existing_formula = lookup_formula_by_id(str(row.get("FormulaID", "")))
+    except Exception:
+        existing_formula = []
+        st.warning("色板已載入，但目前無法從配方表載入色粉明細。")
     f = existing_formula[0] if existing_formula else {}
 
     col_a, col_b, col_c = st.columns(3)
@@ -171,7 +192,7 @@ def render_edit_page():
                 updates["ImageBase64"] = image_base64
                 updates["EmbeddingStatus"] = "PROCESSING"
 
-            update_colorboard_row(board_id, updates)
+            update_color_match_board(board_id, updates)
 
             # 配方
             has_formula = any(p.strip() for p in pigments)
@@ -216,7 +237,10 @@ def render_edit_page():
                     embedding,
                     now
                 )
-                update_colorboard_row(board_id, {"EmbeddingStatus": "Y", "LastUpdate": now})
+                update_color_match_board(
+                    board_id,
+                    {"EmbeddingStatus": "Y", "LastUpdate": now},
+                )
 
             st.success("✅ 更新完成！")
             st.session_state.pop("edit_target", None)

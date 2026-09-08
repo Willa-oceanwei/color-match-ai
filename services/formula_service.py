@@ -1,4 +1,4 @@
-from services.google_sheet import lookup_formula_by_id
+from services.formula_repository import lookup_formula_by_id
 from services.models import FormulaResolution
 
 

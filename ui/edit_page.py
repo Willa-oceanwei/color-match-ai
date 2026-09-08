@@ -12,6 +12,7 @@ from services.google_drive import write_uploaded_bytes_get_base64, resolve_local
 import base64
 import io
 from PIL import Image
+from ui.design import render_page_header
 
 
 def _base64_to_image(b64: str):
@@ -22,9 +23,9 @@ def _base64_to_image(b64: str):
 
 
 def render_edit_page():
-    st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold;'>修改色板資料</h2>",
-        unsafe_allow_html=True
+    render_page_header(
+        "✏️", "BOARD EDITOR", "修改色板資料",
+        "搜尋既有色板後，更新基本資料、配方內容或照片。",
     )
 
     # =========================

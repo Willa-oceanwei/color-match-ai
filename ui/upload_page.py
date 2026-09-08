@@ -13,6 +13,7 @@ from services.turso_db import (
     update_color_match_embedding_status,
 )
 from services.id_utils import build_board_id, build_image_path, normalize_material
+from ui.design import render_page_header
 
 
 # =========================
@@ -36,9 +37,9 @@ def get_cached_embedding(material, path, fn):
 # =========================
 def render_upload_page():
 
-    st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold;'>上傳色板資料庫</h2>",
-        unsafe_allow_html=True
+    render_page_header(
+        "⬆️", "NEW COLOR BOARD", "新增色板",
+        "建立色板基本資料、配方與影像向量，儲存後即可搜尋。",
     )
 
     # =========================

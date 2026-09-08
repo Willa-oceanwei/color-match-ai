@@ -2,6 +2,7 @@ import streamlit as st
 import base64
 import io
 from PIL import Image
+from ui.design import render_page_header
 from services.google_sheet import lookup_formula_by_id
 from services.google_sheet import read_colorboard
 from services.turso_db import (
@@ -21,34 +22,41 @@ def _base64_to_image(b64: str):
 
 
 def render_formula_search_page():
-    st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold;'>搜尋配方色板</h2>",
-        unsafe_allow_html=True
+    render_page_header(
+        "🧪",
+        "FORMULA LIBRARY",
+        "搜尋配方色板",
+        "以配方、色板、公司或顏色，快速找到歷史色板與配方明細。",
     )
 
-    search_id = st.text_input(
-        "搜尋配方編號、色板 ID、公司名稱或顏色",
-        placeholder="例如：52824、公司名稱或紅色",
-    )
+    search_col, tool_col = st.columns([6, 1], vertical_alignment="bottom")
+    with search_col:
+        search_id = st.text_input(
+            "搜尋資料庫",
+            placeholder="輸入配方編號、公司名稱或顏色…",
+            label_visibility="collapsed",
+        )
+    with tool_col:
+        with st.popover("⚙️ 資料維護", use_container_width=True):
+            st.markdown("**匯入 Google Sheet 舊色板**")
+            st.caption("僅補入 Turso 尚未存在的色板，不會覆蓋目前資料。")
+            if st.button("開始匯入", type="secondary", use_container_width=True):
+                try:
+                    with st.spinner("正在匯入…"):
+                        sheet_rows = read_colorboard()
+                        migration = import_color_match_boards(sheet_rows)
+                    st.success(
+                        f"新增 {migration['inserted']} 筆，"
+                        f"略過 {migration['skipped']} 筆。"
+                    )
+                except Exception as error:
+                    st.error("舊資料匯入失敗。")
+                    st.caption(f"診斷訊息：{error}")
 
-    with st.expander("📥 匯入 Google Sheet 舊色板"):
-        st.caption("只補進 Turso 尚未存在的色板 ID，不會覆蓋目前資料。")
-        if st.button("開始匯入舊色板", type="secondary"):
-            try:
-                with st.spinner("正在讀取 Google Sheet 並匯入 Turso…"):
-                    sheet_rows = read_colorboard()
-                    migration = import_color_match_boards(sheet_rows)
-                st.success(
-                    f"匯入完成：新增 {migration['inserted']} 筆、"
-                    f"略過 {migration['skipped']} 筆，共檢查 {migration['total']} 筆。"
-                )
-            except Exception as error:
-                st.error("Google Sheet 舊資料匯入失敗。")
-                st.caption(f"診斷訊息：{error}")
+    st.caption("可搜尋：配方編號 · 色板 ID · 公司名稱 · 顏色")
 
     if not search_id.strip():
-        st.info("請輸入配方編號、色板 ID、公司名稱或顏色。")
-        st.markdown("### 最近一筆記錄")
+        st.markdown("#### 最近一筆記錄")
         try:
             recent_rows = get_recent_color_match_boards(limit=1)
         except Exception as error:
@@ -57,24 +65,19 @@ def render_formula_search_page():
             return
 
         if recent_rows:
-            st.dataframe(
-                [
-                    {
-                        "顏色（料號）": (
-                            f"{row.get('ColorName', '') or '（未填顏色）'}"
-                            f"（{row.get('FormulaID', '') or row.get('ID', '')}）"
-                        ),
-                        "色板 ID": row.get("ID", ""),
-                        "原料": row.get("Material", ""),
-                        "客戶": row.get("Customer", ""),
-                        "新增時間": row.get("LastUpdate", "")
-                        or row.get("CreateDate", ""),
-                    }
-                    for row in recent_rows
-                ],
-                hide_index=True,
-                use_container_width=True,
-            )
+            row = recent_rows[0]
+            item_number = row.get("FormulaID", "") or row.get("ID", "")
+            with st.container(border=True):
+                title_col, meta_col = st.columns([3, 2])
+                with title_col:
+                    st.markdown(
+                        f"**{row.get('ColorName', '') or '未命名顏色'}**　"
+                        f"`{item_number}`"
+                    )
+                    st.caption(f"{row.get('Customer', '') or '未填公司'} · {row.get('Material', '')}")
+                with meta_col:
+                    st.caption("最後更新")
+                    st.markdown(row.get("LastUpdate", "") or row.get("CreateDate", "") or "—")
         else:
             st.caption("目前還沒有色板紀錄。")
         return

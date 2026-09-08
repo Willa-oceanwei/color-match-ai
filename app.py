@@ -6,6 +6,7 @@ from ui.search_page import render_search_page
 from ui.upload_page import render_upload_page
 from ui.formula_search_page import render_formula_search_page
 from ui.edit_page import render_edit_page
+from services.turso_db import init_color_match_tables
 
 st.set_page_config(
     page_title="color-match-ai",
@@ -13,6 +14,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+try:
+    init_color_match_tables()
+except Exception as e:
+    st.error(f"Turso 初始化失敗：{e}")
 
 # ======== 🚀 Modern Style ========
 def apply_modern_style():

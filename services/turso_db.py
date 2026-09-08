@@ -81,6 +81,23 @@ def append_color_match_board(row: dict):
         ),
     )
 
+    def update_color_match_embedding_status(board_id: str, status: str, last_update: str):
+    conn = get_turso_client()
+
+    conn.execute(
+        """
+        UPDATE color_match_boards
+        SET embedding_status = ?,
+            last_update = ?
+        WHERE id = ?
+        """,
+        (
+            status,
+            last_update,
+            board_id,
+        ),
+    )
+
     conn.commit()
     conn.sync()
     conn.close()

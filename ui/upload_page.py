@@ -9,6 +9,7 @@ from services.formula_service import resolve_formula_mode
 from services.google_drive import write_uploaded_bytes, resolve_local_image_path
 from services.turso_db import (
     append_color_match_board,
+    get_color_match_board_by_id,
     update_color_match_embedding_status,
 )
 from services.id_utils import build_board_id, build_image_path, normalize_material
@@ -208,7 +209,8 @@ def render_upload_page():
 
     st.info(
         "📸 拍攝建議：畫素 800×800 左右即可，"
-        "主體色板占畫面70%，D65光源，背景建議使用灰色底"
+        "主體色板占畫面70%，D65光源，背景建議使用灰色底，"
+        "焦距建議設為 3 倍"
     )
 
     # =========================
@@ -259,7 +261,7 @@ def render_upload_page():
             # =====================
             # STEP 2 TURSO
             # =====================
-            formula_mode = resolve_formula_mode(
+            formula_resolution = resolve_formula_mode(
                 formula_id
             )
 
@@ -268,7 +270,7 @@ def render_upload_page():
                 "FormulaID": formula_id.strip(),
                 "Material": normalize_material(material),
                 "ImagePath": image_path,
-                "FormulaMode": str(formula_mode),
+                "FormulaMode": formula_resolution.formula_mode,
                 "RecipeStatus": recipe_status,
                 "EmbeddingStatus": "PROCESSING",
                 "Customer": customer,
@@ -281,6 +283,15 @@ def render_upload_page():
             }
 
             append_color_match_board(row)
+
+            # Do not report a successful upload until the row can be read back.
+            # This catches replica/write issues immediately instead of leaving the
+            # user with a success message for a record that cannot be searched.
+            saved_row = get_color_match_board_by_id(board_id)
+            if not saved_row:
+                raise RuntimeError(
+                    "Turso 儲存驗證失敗：寫入後找不到色板資料，請重新上傳。"
+                )
 
             # =====================
             # STEP 2b FORMULA（選填）
@@ -414,6 +425,14 @@ def render_upload_page():
             st.success(
                 "✅ 上傳完成（Turso + Vector + Image）"
             )
+
+            if formula_id.strip():
+                st.info(
+                    f"配方編號：**{formula_id.strip()}**　｜　"
+                    f"色板 ID：**{board_id}**"
+                )
+            else:
+                st.info(f"本次未填配方編號　｜　色板 ID：**{board_id}**")
 
             st.session_state[
                 "last_uploaded_id"

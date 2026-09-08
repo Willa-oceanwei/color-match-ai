@@ -72,6 +72,8 @@ class Settings:
     formula_worksheet_name: str = _get(
         "FORMULA_WORKSHEET_NAME", "配方管理"
     )
+    formula_turso_database_url: str = _get("FORMULA_TURSO_DATABASE_URL", "")
+    formula_turso_auth_token: str = _get("FORMULA_TURSO_AUTH_TOKEN", "")
     google_drive_root_folder_id: str = _get(
         "GOOGLE_DRIVE_ROOT_FOLDER_ID", ""
     )

@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 import io
 from PIL import Image
-from services.google_sheet import lookup_formula_by_id
+from services.formula_repository import lookup_formula_by_id
 
 
 def _base64_to_image(b64: str):

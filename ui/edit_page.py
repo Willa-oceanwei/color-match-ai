@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime
-from services.google_sheet import append_formula_row, lookup_formula_by_id
+from services.google_sheet import append_formula_row
+from services.formula_repository import lookup_formula_by_id
 from services.turso_db import (
     get_color_match_board_by_id,
     get_color_match_boards_by_formula_id,

@@ -156,6 +156,35 @@ def test_similar_formula_ids_ignores_short_queries(monkeypatch):
     assert turso_db.get_similar_formula_ids("A") == []
 
 
+def test_lookup_managed_formula_maps_recipe_and_components(monkeypatch):
+    class FormulaConnection(FakeConnection):
+        def __init__(self):
+            super().__init__([])
+            self.calls = []
+
+        def execute(self, query, params=()):
+            self.events.append("execute")
+            self.calls.append((query, params))
+            if "FROM recipes" in query:
+                return FakeDbApiCursor([(
+                    "A1503C", "紅色", "客戶甲", "186 C",
+                    "1", "2", None, 1000, "g", "一般", "備註",
+                )])
+            return FakeDbApiCursor([("R-01", 12.5), ("Y-02", 3.0)])
+
+    connection = FormulaConnection()
+    monkeypatch.setattr(turso_db, "get_formula_turso_client", lambda: connection)
+
+    result = turso_db.lookup_managed_formula_by_id("A1503C")
+
+    assert result[0]["FormulaID"] == "A1503C"
+    assert result[0]["AddRatio"] == "1 / 2"
+    assert result[0]["Pigment1"] == "R-01"
+    assert result[0]["Weight2"] == 3.0
+    assert result[0]["FormulaSource"] == "Turso 配方管理"
+    assert connection.events[-1] == "close"
+
+
 def test_read_uses_local_replica_when_sync_temporarily_fails(monkeypatch):
     connection = FakeConnection([_row()], sync_error=RuntimeError("offline"))
     monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)

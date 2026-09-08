@@ -3,8 +3,8 @@ import base64
 import io
 from PIL import Image
 from ui.design import render_page_header
-from services.google_sheet import lookup_formula_by_id
 from services.google_sheet import read_colorboard
+from services.formula_repository import lookup_formula_by_id
 from services.turso_db import (
     get_color_match_board_by_id,
     get_color_match_boards_by_formula_id,
@@ -141,6 +141,8 @@ def render_formula_search_page():
 
     if formulas:
         f = formulas[0]
+        if f.get("FormulaSource"):
+            st.caption(f"配方來源：{f['FormulaSource']}")
 
         # =====================
         # 色粉明細（先顯示）

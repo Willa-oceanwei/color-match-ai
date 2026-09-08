@@ -1,6 +1,7 @@
 import streamlit as st
 import libsql
 from difflib import SequenceMatcher
+from config import SETTINGS
 
 
 COLOR_MATCH_COLUMNS = (
@@ -52,6 +53,18 @@ def get_turso_client():
 
     return libsql.connect(
         "color_match_local.db",
+        sync_url=url,
+        auth_token=auth_token,
+    )
+
+
+def get_formula_turso_client():
+    url = SETTINGS.formula_turso_database_url or st.secrets["TURSO_DATABASE_URL"]
+    auth_token = (
+        SETTINGS.formula_turso_auth_token or st.secrets["TURSO_AUTH_TOKEN"]
+    )
+    return libsql.connect(
+        "formula_management_local.db",
         sync_url=url,
         auth_token=auth_token,
     )
@@ -373,6 +386,62 @@ def get_similar_formula_ids(formula_id: str, limit: int = 5):
         for score, candidate in sorted(scored_ids, key=lambda item: (-item[0], item[1]))
         if score >= 0.65
     ][:safe_limit]
+
+
+def lookup_managed_formula_by_id(formula_id: str):
+    """Read a recipe and its components from color-powder-app tables."""
+    clean_formula_id = str(formula_id or "").strip()
+    if not clean_formula_id:
+        return []
+
+    conn = get_formula_turso_client()
+    try:
+        _sync_replica(conn)
+        recipe_rows = _fetch_rows(conn.execute(
+            """
+            SELECT recipe_id, color, customer_name, pantone_code,
+                   ratio1, ratio2, ratio3, net_weight, net_weight_unit,
+                   total_category, notes
+            FROM recipes
+            WHERE recipe_id = ? COLLATE NOCASE
+              AND COALESCE(lifecycle_status, 'active') = 'active'
+            LIMIT 1
+            """,
+            (clean_formula_id,),
+        ))
+        if not recipe_rows:
+            return []
+
+        recipe = recipe_rows[0]
+        component_rows = _fetch_rows(conn.execute(
+            """
+            SELECT rc.colorpowder_id, rc.weight
+            FROM recipe_components AS rc
+            WHERE rc.recipe_id = ? COLLATE NOCASE
+            ORDER BY rc.position
+            LIMIT 8
+            """,
+            (clean_formula_id,),
+        ))
+        ratios = [str(value).strip() for value in recipe[4:7] if value not in (None, "")]
+        result = {
+            "FormulaID": recipe[0],
+            "ColorName": recipe[1] or "",
+            "Customer": recipe[2] or "",
+            "Pantone": recipe[3] or "",
+            "AddRatio": " / ".join(ratios),
+            "NetWeight": recipe[7] if recipe[7] is not None else "",
+            "NetWeightUnit": recipe[8] or "",
+            "TotalType": recipe[9] or "",
+            "Remark": recipe[10] or "",
+            "FormulaSource": "Turso 配方管理",
+        }
+        for position, component in enumerate(component_rows, start=1):
+            result[f"Pigment{position}"] = component[0]
+            result[f"Weight{position}"] = component[1]
+        return [result]
+    finally:
+        conn.close()
 
 
 def update_color_match_board(board_id: str, updates: dict):

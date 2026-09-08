@@ -26,7 +26,7 @@ def render_formula_search_page():
         return
 
     # 搜尋 ColorBoard
-    all_rows = get_all_colorboards()
+    all_rows = get_all_color_match_boards()
     matched = [
         r for r in all_rows
         if str(r.get("FormulaID", "")).strip() == formula_id.strip()

@@ -24,6 +24,7 @@ def get_cached_embedding(material, path, fn):
     key = f"{material}:{path}"
     if key in _embedding_cache:
         return _embedding_cache[key]
+
     emb = fn()
     _embedding_cache[key] = emb
     return emb
@@ -43,32 +44,53 @@ def render_upload_page():
     # INPUT
     # =========================
     col1, col2, col3 = st.columns(3)
+
     with col1:
         material = st.selectbox(
             "Material",
             ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
         )
+
     with col2:
         formula_id = st.text_input("FormulaID")
+
     with col3:
         customer = st.text_input("Customer")
 
     col4, col5, col6 = st.columns(3)
+
     with col4:
         color_name = st.text_input("ColorName")
+
     with col5:
         pantone = st.text_input("Pantone")
+
     with col6:
         remark = st.text_input("Remark")
+
     # =========================
     # 配方輸入（選填）
     # =========================
     with st.expander("🧪 輸入配方資料（選填）"):
+
         col_a, col_b, col_c = st.columns(3)
+
         with col_a:
-            add_ratio = st.number_input("添加比例 (g/kg)", min_value=0.0, step=0.1, format="%.1f")
+            add_ratio = st.number_input(
+                "添加比例 (g/kg)",
+                min_value=0.0,
+                step=0.1,
+                format="%.1f"
+            )
+
         with col_b:
-            net_weight = st.number_input("淨重 (g)", min_value=0.0, step=0.1, format="%.1f")
+            net_weight = st.number_input(
+                "淨重 (g)",
+                min_value=0.0,
+                step=0.1,
+                format="%.1f"
+            )
+
         with col_c:
             total_type = st.selectbox(
                 "合計類別",
@@ -77,75 +99,126 @@ def render_upload_page():
 
         st.markdown("**色粉資料**")
 
-        # 色粉編號：每列4個
         pigments = []
         weights = []
 
         cols_p = st.columns(4)
+
         for i in range(4):
             with cols_p[i]:
-                p = st.text_input(f"色粉編號 {i+1}", key=f"pigment_{i+1}")
+                p = st.text_input(
+                    f"色粉編號 {i+1}",
+                    key=f"pigment_{i+1}"
+                )
                 pigments.append(p)
 
         cols_w = st.columns(4)
+
         for i in range(4):
             with cols_w[i]:
-                w = st.number_input(f"重量 {i+1} (g)", min_value=0.0, step=0.01, format="%.2f", key=f"weight_{i+1}")
+                w = st.number_input(
+                    f"重量 {i+1} (g)",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key=f"weight_{i+1}"
+                )
                 weights.append(w)
 
         cols_p2 = st.columns(4)
+
         for i in range(4, 8):
-            with cols_p2[i-4]:
-                p = st.text_input(f"色粉編號 {i+1}", key=f"pigment_{i+1}")
+            with cols_p2[i - 4]:
+                p = st.text_input(
+                    f"色粉編號 {i+1}",
+                    key=f"pigment_{i+1}"
+                )
                 pigments.append(p)
 
         cols_w2 = st.columns(4)
+
         for i in range(4, 8):
-            with cols_w2[i-4]:
-                w = st.number_input(f"重量 {i+1} (g)", min_value=0.0, step=0.01, format="%.2f", key=f"weight_{i+1}")
+            with cols_w2[i - 4]:
+                w = st.number_input(
+                    f"重量 {i+1} (g)",
+                    min_value=0.0,
+                    step=0.01,
+                    format="%.2f",
+                    key=f"weight_{i+1}"
+                )
                 weights.append(w)
 
-        col_r1, col_r2 = st.columns(2)
-        with col_r1:
-            formula_remark = st.text_input("配方備註", key="formula_remark")
+        formula_remark = st.text_input(
+            "配方備註",
+            key="formula_remark"
+        )
 
-    uploaded = st.file_uploader("上傳色板照片", type=["jpg", "jpeg", "png"])
+    # =========================
+    # IMAGE
+    # =========================
+    uploaded = st.file_uploader(
+        "上傳色板照片",
+        type=["jpg", "jpeg", "png"]
+    )
 
+    # =========================
+    # RECIPE STATUS
+    # =========================
     recipe_status_label = st.selectbox(
-    "RecipeStatus",
-    [
-        "正式樣（OFFICIAL）",
-        "試樣（TRIAL）",
-        "失敗樣（FAILED）",
-        "參考樣（REFERENCE）",
-    ],
-    index=0
-)
+        "RecipeStatus",
+        [
+            "正式樣（OFFICIAL）",
+            "試樣（TRIAL）",
+            "失敗樣（FAILED）",
+            "參考樣（REFERENCE）",
+        ],
+        index=0
+    )
 
-recipe_status_map = {
-    "正式樣（OFFICIAL）": "OFFICIAL",
-    "試樣（TRIAL）": "TRIAL",
-    "失敗樣（FAILED）": "FAILED",
-    "參考樣（REFERENCE）": "REFERENCE",
-}
+    recipe_status_map = {
+        "正式樣（OFFICIAL）": "OFFICIAL",
+        "試樣（TRIAL）": "TRIAL",
+        "失敗樣（FAILED）": "FAILED",
+        "參考樣（REFERENCE）": "REFERENCE",
+    }
 
-recipe_status = recipe_status_map[recipe_status_label]
+    recipe_status = recipe_status_map[recipe_status_label]
 
     uploaded_bytes = uploaded.getvalue() if uploaded else None
 
     # =========================
     # ID
     # =========================
-    board_id = build_board_id(material, formula_id or None)
-    extension = Path(uploaded.name).suffix if uploaded else ".jpg"
-    image_path = build_image_path(material, board_id, extension)
+    board_id = build_board_id(
+        material,
+        formula_id or None
+    )
 
-    st.info("📸 拍攝建議：畫素 300×300 以上，主體色板占畫面70%，D65光源，背景建議使用灰色底")
+    extension = (
+        Path(uploaded.name).suffix
+        if uploaded
+        else ".jpg"
+    )
+
+    image_path = build_image_path(
+        material,
+        board_id,
+        extension
+    )
+
+    st.info(
+        "📸 拍攝建議：畫素 800×800 左右即可，"
+        "主體色板占畫面70%，D65光源，背景建議使用灰色底"
+    )
 
     # =========================
     # BUTTON
     # =========================
-    if st.button("🚀 儲存並建立向量", disabled=uploaded is None):
+    if st.button(
+        "🚀 儲存並建立向量",
+        disabled=uploaded is None
+    ):
+
         if not uploaded_bytes:
             st.error("No image")
             return
@@ -158,19 +231,38 @@ recipe_status = recipe_status_map[recipe_status_label]
         create_date = datetime.now().strftime("%Y/%m/%d")
 
         try:
+
             # =====================
             # STEP 1 IMAGE
             # =====================
-            from services.google_drive import write_uploaded_bytes_get_base64
-            image_path, image_base64 = write_uploaded_bytes_get_base64(uploaded_bytes, image_path)
-            image_full_path = SETTINGS.local_drive_root / image_path
-            if not image_full_path.exists() or image_full_path.stat().st_size == 0:
+            from services.google_drive import (
+                write_uploaded_bytes_get_base64
+            )
+
+            image_path, image_base64 = (
+                write_uploaded_bytes_get_base64(
+                    uploaded_bytes,
+                    image_path
+                )
+            )
+
+            image_full_path = (
+                SETTINGS.local_drive_root / image_path
+            )
+
+            if (
+                not image_full_path.exists()
+                or image_full_path.stat().st_size == 0
+            ):
                 raise ValueError("Image write failed")
 
             # =====================
-            # STEP 2 GOOGLE SHEET
+            # STEP 2 TURSO
             # =====================
-            formula_mode = resolve_formula_mode(formula_id)
+            formula_mode = resolve_formula_mode(
+                formula_id
+            )
+
             row = {
                 "ID": board_id,
                 "FormulaID": formula_id.strip(),
@@ -187,67 +279,166 @@ recipe_status = recipe_status_map[recipe_status_label]
                 "Remark": remark,
                 "ImageBase64": image_base64,
             }
+
             append_color_match_board(row)
 
             # =====================
             # STEP 2b FORMULA（選填）
             # =====================
-            has_formula = any(p.strip() for p in pigments)
-            if has_formula and formula_id.strip():
+            has_formula = any(
+                p.strip()
+                for p in pigments
+            )
+
+            if (
+                has_formula
+                and formula_id.strip()
+            ):
                 from services.google_sheet import append_formula_row
+
                 formula_row = {
                     "FormulaID": formula_id.strip(),
                     "ColorName": color_name,
                     "Customer": customer,
                     "Pantone": pantone,
-                    "AddRatio": add_ratio if add_ratio > 0 else "",
-                    "NetWeight": net_weight if net_weight > 0 else "",
-                    "Pigment1": pigments[0], "Pigment2": pigments[1],
-                    "Pigment3": pigments[2], "Pigment4": pigments[3],
-                    "Pigment5": pigments[4], "Pigment6": pigments[5],
-                    "Pigment7": pigments[6], "Pigment8": pigments[7],
-                    "Weight1": weights[0] if weights[0] > 0 else "",
-                    "Weight2": weights[1] if weights[1] > 0 else "",
-                    "Weight3": weights[2] if weights[2] > 0 else "",
-                    "Weight4": weights[3] if weights[3] > 0 else "",
-                    "Weight5": weights[4] if weights[4] > 0 else "",
-                    "Weight6": weights[5] if weights[5] > 0 else "",
-                    "Weight7": weights[6] if weights[6] > 0 else "",
-                    "Weight8": weights[7] if weights[7] > 0 else "",
+
+                    "AddRatio": (
+                        add_ratio
+                        if add_ratio > 0
+                        else ""
+                    ),
+
+                    "NetWeight": (
+                        net_weight
+                        if net_weight > 0
+                        else ""
+                    ),
+
+                    "Pigment1": pigments[0],
+                    "Pigment2": pigments[1],
+                    "Pigment3": pigments[2],
+                    "Pigment4": pigments[3],
+                    "Pigment5": pigments[4],
+                    "Pigment6": pigments[5],
+                    "Pigment7": pigments[6],
+                    "Pigment8": pigments[7],
+
+                    "Weight1": (
+                        weights[0]
+                        if weights[0] > 0
+                        else ""
+                    ),
+
+                    "Weight2": (
+                        weights[1]
+                        if weights[1] > 0
+                        else ""
+                    ),
+
+                    "Weight3": (
+                        weights[2]
+                        if weights[2] > 0
+                        else ""
+                    ),
+
+                    "Weight4": (
+                        weights[3]
+                        if weights[3] > 0
+                        else ""
+                    ),
+
+                    "Weight5": (
+                        weights[4]
+                        if weights[4] > 0
+                        else ""
+                    ),
+
+                    "Weight6": (
+                        weights[5]
+                        if weights[5] > 0
+                        else ""
+                    ),
+
+                    "Weight7": (
+                        weights[6]
+                        if weights[6] > 0
+                        else ""
+                    ),
+
+                    "Weight8": (
+                        weights[7]
+                        if weights[7] > 0
+                        else ""
+                    ),
+
                     "TotalType": total_type,
                     "Remark": formula_remark,
                 }
+
                 append_formula_row(formula_row)
 
             # =====================
             # STEP 3 EMBEDDING
             # =====================
-            local_path = resolve_local_image_path(image_path)
+            local_path = resolve_local_image_path(
+                image_path
+            )
+
             embedding = get_cached_embedding(
                 material,
                 image_path,
                 lambda: embed_image(local_path)
             )
-            upsert_embedding(material, {
-                "id": board_id,
-                "image_path": image_path,
-                "formula_id": formula_id.strip(),
-                "recipe_status": recipe_status
-            }, embedding, now)
 
-            update_color_match_embedding_status(board_id, "Y", now)
+            upsert_embedding(
+                material,
+                {
+                    "id": board_id,
+                    "image_path": image_path,
+                    "formula_id": formula_id.strip(),
+                    "recipe_status": recipe_status
+                },
+                embedding,
+                now
+            )
+
+            update_color_match_embedding_status(
+                board_id,
+                "Y",
+                now
+            )
 
             # =====================
             # DONE
             # =====================
-            st.success("✅ 上傳完成（Turso + Vector + Image）")
-            st.session_state["last_uploaded_id"] = board_id
+            st.success(
+                "✅ 上傳完成（Turso + Vector + Image）"
+            )
+
+            st.session_state[
+                "last_uploaded_id"
+            ] = board_id
 
         except Exception as e:
+
             import traceback
-            st.error(f"❌ ERROR: {str(e)}")
-            st.code(traceback.format_exc())
+
+            st.error(
+                f"❌ ERROR: {str(e)}"
+            )
+
+            st.code(
+                traceback.format_exc()
+            )
+
             try:
-                update_color_match_embedding_status(board_id, "FAILED", now)
+                update_color_match_embedding_status(
+                    board_id,
+                    "FAILED",
+                    now
+                )
+
             except Exception as e2:
-                st.error(f"update status failed: {e2}")
+                st.error(
+                    f"update status failed: {e2}"
+                )

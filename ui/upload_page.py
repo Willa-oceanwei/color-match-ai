@@ -111,11 +111,25 @@ def render_upload_page():
 
     uploaded = st.file_uploader("上傳色板照片", type=["jpg", "jpeg", "png"])
 
-    recipe_status = st.selectbox(
-        "RecipeStatus",
-        ["OFFICIAL", "REFERENCE", "TRIAL", "FAILED"],
-        index=0
-    )
+    recipe_status_label = st.selectbox(
+    "RecipeStatus",
+    [
+        "正式樣（OFFICIAL）",
+        "試樣（TRIAL）",
+        "失敗樣（FAILED）",
+        "參考樣（REFERENCE）",
+    ],
+    index=0
+)
+
+recipe_status_map = {
+    "正式樣（OFFICIAL）": "OFFICIAL",
+    "試樣（TRIAL）": "TRIAL",
+    "失敗樣（FAILED）": "FAILED",
+    "參考樣（REFERENCE）": "REFERENCE",
+}
+
+recipe_status = recipe_status_map[recipe_status_label]
 
     uploaded_bytes = uploaded.getvalue() if uploaded else None
 

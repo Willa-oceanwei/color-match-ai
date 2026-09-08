@@ -46,49 +46,6 @@ def _fetch_rows(cursor):
     return getattr(cursor, "rows", cursor)
 
 
-COLOR_MATCH_COLUMNS = (
-    "ID",
-    "Material",
-    "ImagePath",
-    "FormulaID",
-    "FormulaMode",
-    "RecipeStatus",
-    "EmbeddingStatus",
-    "Customer",
-    "ColorName",
-    "Pantone",
-    "CreateDate",
-    "LastUpdate",
-    "Remark",
-    "ImageBase64",
-)
-
-COLOR_MATCH_SCHEMA = {
-    "id": "TEXT",
-    "material": "TEXT",
-    "image_path": "TEXT",
-    "formula_id": "TEXT",
-    "formula_mode": "TEXT",
-    "recipe_status": "TEXT",
-    "embedding_status": "TEXT",
-    "customer": "TEXT",
-    "color_name": "TEXT",
-    "pantone": "TEXT",
-    "create_date": "TEXT",
-    "last_update": "TEXT",
-    "remark": "TEXT",
-    "image_base64": "TEXT",
-}
-
-
-def _fetch_rows(cursor):
-    """Return query rows for both DB-API cursors and legacy libsql results."""
-    fetchall = getattr(cursor, "fetchall", None)
-    if callable(fetchall):
-        return fetchall()
-    return getattr(cursor, "rows", cursor)
-
-
 def get_turso_client():
     url = st.secrets["TURSO_DATABASE_URL"]
     auth_token = st.secrets["TURSO_AUTH_TOKEN"]

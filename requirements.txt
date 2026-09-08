@@ -7,4 +7,4 @@ gspread>=6.1
 google-auth>=2.30
 google-api-python-client>=2.134
 # Turso
-libsql-client
+libsql

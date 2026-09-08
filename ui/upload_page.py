@@ -226,7 +226,7 @@ def render_upload_page():
             # =====================
             # DONE
             # =====================
-            st.success("✅ 上傳完成（Google Sheet + Vector + Image）")
+            st.success("✅ 上傳完成（Turso + Vector + Image）")
             st.session_state["last_uploaded_id"] = board_id
 
         except Exception as e:

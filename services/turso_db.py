@@ -1,5 +1,49 @@
 import streamlit as st
 import libsql
+from difflib import SequenceMatcher
+
+
+COLOR_MATCH_COLUMNS = (
+    "ID",
+    "Material",
+    "ImagePath",
+    "FormulaID",
+    "FormulaMode",
+    "RecipeStatus",
+    "EmbeddingStatus",
+    "Customer",
+    "ColorName",
+    "Pantone",
+    "CreateDate",
+    "LastUpdate",
+    "Remark",
+    "ImageBase64",
+)
+
+COLOR_MATCH_SCHEMA = {
+    "id": "TEXT",
+    "material": "TEXT",
+    "image_path": "TEXT",
+    "formula_id": "TEXT",
+    "formula_mode": "TEXT",
+    "recipe_status": "TEXT",
+    "embedding_status": "TEXT",
+    "customer": "TEXT",
+    "color_name": "TEXT",
+    "pantone": "TEXT",
+    "create_date": "TEXT",
+    "last_update": "TEXT",
+    "remark": "TEXT",
+    "image_base64": "TEXT",
+}
+
+
+def _fetch_rows(cursor):
+    """Return query rows for both DB-API cursors and legacy libsql results."""
+    fetchall = getattr(cursor, "fetchall", None)
+    if callable(fetchall):
+        return fetchall()
+    return getattr(cursor, "rows", cursor)
 
 
 COLOR_MATCH_COLUMNS = (
@@ -336,6 +380,42 @@ def search_color_match_boards(keyword: str, limit: int = 50):
         (like_keyword, like_keyword),
         limit=safe_limit,
     )
+
+
+def get_similar_formula_ids(formula_id: str, limit: int = 5):
+    """Return likely formula IDs for a mistyped or near-matching ID."""
+    clean_formula_id = str(formula_id or "").strip()
+    if len(clean_formula_id) < 2:
+        return []
+
+    safe_limit = max(1, min(int(limit), 10))
+    prefix = clean_formula_id[:2].replace("\\", "\\\\")
+    prefix = prefix.replace("%", "\\%").replace("_", "\\_")
+    candidates = _read_color_match_boards(
+        "formula_id IS NOT NULL AND TRIM(formula_id) != '' "
+        "AND formula_id LIKE ? ESCAPE '\\' COLLATE NOCASE",
+        (f"{prefix}%",),
+        limit=100,
+    )
+
+    unique_ids = {
+        str(row.get("FormulaID", "") or "").strip()
+        for row in candidates
+        if str(row.get("FormulaID", "") or "").strip()
+    }
+    scored_ids = [
+        (
+            SequenceMatcher(None, clean_formula_id.casefold(), candidate.casefold()).ratio(),
+            candidate,
+        )
+        for candidate in unique_ids
+        if candidate.casefold() != clean_formula_id.casefold()
+    ]
+    return [
+        candidate
+        for score, candidate in sorted(scored_ids, key=lambda item: (-item[0], item[1]))
+        if score >= 0.65
+    ][:safe_limit]
 
 
 def update_color_match_board(board_id: str, updates: dict):

@@ -129,6 +129,33 @@ def test_search_boards_by_customer_or_color_escapes_like_wildcards(monkeypatch):
     assert connection.params == ("%ACME\\_100\\%%", "%ACME\\_100\\%%", 50)
 
 
+def test_similar_formula_ids_rank_nearest_match(monkeypatch):
+    rows = [
+        _row("A1503C"),
+        _row("A1508B"),
+        _row("A1503C"),
+        _row("A9999Z"),
+    ]
+    connection = FakeConnection(rows)
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.get_similar_formula_ids("A1503A")
+
+    assert result[0] == "A1503C"
+    assert result.count("A1503C") == 1
+    assert connection.params == ("A1%", 100)
+
+
+def test_similar_formula_ids_ignores_short_queries(monkeypatch):
+    monkeypatch.setattr(
+        turso_db,
+        "get_turso_client",
+        lambda: (_ for _ in ()).throw(AssertionError("must not connect")),
+    )
+
+    assert turso_db.get_similar_formula_ids("A") == []
+
+
 def test_read_uses_local_replica_when_sync_temporarily_fails(monkeypatch):
     connection = FakeConnection([_row()], sync_error=RuntimeError("offline"))
     monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)

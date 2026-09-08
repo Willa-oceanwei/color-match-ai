@@ -8,6 +8,7 @@ from services.google_sheet import read_colorboard
 from services.turso_db import (
     get_color_match_board_by_id,
     get_color_match_boards_by_formula_id,
+    get_similar_formula_ids,
     get_recent_color_match_boards,
     import_color_match_boards,
     search_color_match_boards,
@@ -19,6 +20,10 @@ def _base64_to_image(b64: str):
         return Image.open(io.BytesIO(img_bytes))
     except Exception:
         return None
+
+
+def _use_suggested_formula(formula_id: str):
+    st.session_state["formula_search_query"] = formula_id
 
 
 def render_formula_search_page():
@@ -35,6 +40,7 @@ def render_formula_search_page():
             "搜尋資料庫",
             placeholder="輸入配方編號、公司名稱或顏色…",
             label_visibility="collapsed",
+            key="formula_search_query",
         )
     with tool_col:
         with st.popover("⚙️ 資料維護", use_container_width=True):
@@ -98,6 +104,22 @@ def render_formula_search_page():
 
     if not matched:
         st.warning(f"查無配方、色板、公司或顏色：{search_id}")
+        try:
+            similar_ids = get_similar_formula_ids(search_id)
+        except Exception:
+            similar_ids = []
+        if similar_ids:
+            st.info("是否輸入有誤？找到以下相近的配方編號：")
+            suggestion_columns = st.columns(min(len(similar_ids), 5))
+            for column, formula_id in zip(suggestion_columns, similar_ids):
+                with column:
+                    st.button(
+                        f"搜尋 {formula_id}",
+                        key=f"similar_formula_{formula_id}",
+                        on_click=_use_suggested_formula,
+                        args=(formula_id,),
+                        use_container_width=True,
+                    )
         return
 
     st.success(f"找到 {len(matched)} 筆色板")

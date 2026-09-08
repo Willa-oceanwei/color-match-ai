@@ -415,6 +415,14 @@ def render_upload_page():
                 "✅ 上傳完成（Turso + Vector + Image）"
             )
 
+            if formula_id.strip():
+                st.info(
+                    f"配方編號：**{formula_id.strip()}**　｜　"
+                    f"色板 ID：**{board_id}**"
+                )
+            else:
+                st.info(f"本次未填配方編號　｜　色板 ID：**{board_id}**")
+
             st.session_state[
                 "last_uploaded_id"
             ] = board_id

@@ -3,19 +3,23 @@ import streamlit as st
 
 from ui.result_components import render_result_card
 from services.search_service import search_top_k
+from ui.design import render_page_header
 
 
 def render_search_page():
 
-    st.markdown(
-        "<h2 style='font-size: 24px; font-weight: bold; color: #333333;'>相近色板搜尋</h2>",
-        unsafe_allow_html=True
+    render_page_header(
+        "🔍", "VISUAL MATCH", "相近色板搜尋",
+        "上傳樣品照片，從相同原料的案例中找出最接近的色板。",
     )
 
     material = st.selectbox(
-        "Material",
-        ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS"]
+        "原料範圍",
+        ["ALL", "PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS"],
+        format_func=lambda value: "不限原料（只比顏色）" if value == "ALL" else value,
     )
+    if material == "ALL":
+        st.caption("將跨原料搜尋；結果以顏色相近程度排序。")
 
     uploaded = st.file_uploader(
         "上傳樣品",

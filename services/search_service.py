@@ -1,22 +1,41 @@
 import numpy as np
 from services.embedding_service import embed_image, load_vector_store
-from services.google_sheet import get_all_colorboards
+from services.turso_db import get_all_color_match_boards
 
 
 def cosine_similarity(a, b):
     a = np.array(a)
     b = np.array(b)
-    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+    denominator = np.linalg.norm(a) * np.linalg.norm(b)
+    if denominator == 0:
+        return 0.0
+    return float(np.dot(a, b) / denominator)
 
 
-def search_top_k(material: str, image_path, top_k: int = 5):
+def search_top_k(material: str | None, image_path, top_k: int = 5):
     # 1️⃣ query embedding
     query_vec = embed_image(image_path)
     # 2️⃣ metadata
-    all_items = get_all_colorboards(material)
+    selected_material = (material or "").strip().upper()
+    unrestricted = selected_material in ("", "ALL")
+    all_items = get_all_color_match_boards()
+    if not unrestricted:
+        all_items = [
+            item for item in all_items
+            if str(item.get("Material", "")).strip().upper() == selected_material
+        ]
     # 3️⃣ vector store
-    vector_store = load_vector_store(material)
-    vector_items = {i["id"]: i["embedding"] for i in vector_store["items"]}
+    materials = (
+        sorted({str(item.get("Material", "")).strip().upper() for item in all_items})
+        if unrestricted
+        else [selected_material]
+    )
+    vector_items = {}
+    for item_material in materials:
+        if not item_material:
+            continue
+        vector_store = load_vector_store(item_material)
+        vector_items.update({i["id"]: i["embedding"] for i in vector_store["items"]})
 
     results = []
     for item in all_items:

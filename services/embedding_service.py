@@ -4,8 +4,19 @@ from PIL import Image
 from config import SETTINGS
 
 
+def _center_crop(image: Image.Image, ratio: float = 0.7) -> Image.Image:
+    """Keep the central color-board area and reduce uncontrolled backgrounds."""
+    width, height = image.size
+    crop_width = max(1, round(width * ratio))
+    crop_height = max(1, round(height * ratio))
+    left = (width - crop_width) // 2
+    top = (height - crop_height) // 2
+    return image.crop((left, top, left + crop_width, top + crop_height))
+
+
 def _color_stats_embedding(image_path: Path) -> np.ndarray:
-    image = Image.open(str(image_path)).convert("RGB").resize((64, 64))
+    image = Image.open(str(image_path)).convert("RGB")
+    image = _center_crop(image).resize((64, 64))
     arr = np.asarray(image, dtype=np.float32) / 255.0
     means = arr.mean(axis=(0, 1))
     stds = arr.std(axis=(0, 1))
@@ -30,7 +41,8 @@ def _openclip_embedding(image_path: Path) -> np.ndarray:
         pretrained=SETTINGS.openclip_pretrained,
     )
     model.eval()
-    image = preprocess(Image.open(image_path).convert("RGB")).unsqueeze(0)
+    image = Image.open(image_path).convert("RGB")
+    image = preprocess(_center_crop(image)).unsqueeze(0)
     with torch.no_grad():
         features = model.encode_image(image)
         features = features / features.norm(dim=-1, keepdim=True)

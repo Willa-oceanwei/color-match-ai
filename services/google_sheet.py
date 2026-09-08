@@ -22,10 +22,15 @@ def _get_colorboard_ws():
 
 def _get_formula_ws():
     client = _get_client()
-    return client.open_by_key(
-        SETTINGS.formula_spreadsheet_id
-    ).worksheet(
-        SETTINGS.formula_worksheet_name
+    spreadsheet = client.open_by_key(SETTINGS.formula_spreadsheet_id)
+    worksheet_names = [SETTINGS.formula_worksheet_name, "配方管理", "Formula"]
+    worksheets = {worksheet.title: worksheet for worksheet in spreadsheet.worksheets()}
+    for worksheet_name in dict.fromkeys(worksheet_names):
+        if worksheet_name in worksheets:
+            return worksheets[worksheet_name]
+    raise ValueError(
+        "找不到配方工作表；已嘗試："
+        + "、".join(dict.fromkeys(worksheet_names))
     )
 
 
@@ -181,20 +186,29 @@ def read_formulas():
     return ws.get_all_records()
 
 
+def _formula_id_from_row(row: dict):
+    for column in ("FormulaID", "配方編號", "料號"):
+        value = str(row.get(column, "") or "").strip()
+        if value:
+            return value
+    return ""
+
+
 def lookup_formula_by_id(formula_id: str):
     if not formula_id:
         return []
+    clean_formula_id = str(formula_id).strip().casefold()
     rows = read_formulas()
     return [
         r for r in rows
-        if str(r["FormulaID"]) == str(formula_id)
+        if _formula_id_from_row(r).casefold() == clean_formula_id
     ]
 
 def append_formula_row(row: dict):
     ws = _get_formula_ws()
     rows = ws.get_all_records()
     for i, r in enumerate(rows, start=2):
-        if str(r["FormulaID"]) == str(row["FormulaID"]):
+        if _formula_id_from_row(r).casefold() == str(row["FormulaID"]).strip().casefold():
             ws.update(f"A{i}", [[
                 row.get("FormulaID", ""),
                 row.get("ColorName", ""),

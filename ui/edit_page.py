@@ -1,11 +1,9 @@
 import streamlit as st
 from datetime import datetime
-from services.google_sheet import (
-    get_colorboard_by_id,
-    get_colorboards_by_formula_id,
-    update_colorboard_row,
-    append_formula_row,
-    lookup_formula_by_id,
+from services.google_sheet import append_formula_row, lookup_formula_by_id
+from services.turso_db import (
+    get_color_match_boards_by_formula_id,
+    update_color_match_board,
 )
 from services.embedding_service import embed_image, upsert_embedding
 from services.google_drive import write_uploaded_bytes_get_base64, resolve_local_image_path
@@ -36,7 +34,11 @@ def render_edit_page():
         st.session_state.pop("edit_target", None)
         st.session_state.pop("edit_targets", None)
         if search_formula.strip():
-            rows = get_colorboards_by_formula_id(search_formula.strip())
+            try:
+                rows = get_color_match_boards_by_formula_id(search_formula.strip())
+            except Exception:
+                st.error("色板資料暫時無法讀取，可能正在同步 Turso，請稍後再試。")
+                return
             if rows:
                 st.session_state["edit_targets"] = rows
                 st.session_state["edit_target"] = rows[0]
@@ -171,7 +173,7 @@ def render_edit_page():
                 updates["ImageBase64"] = image_base64
                 updates["EmbeddingStatus"] = "PROCESSING"
 
-            update_colorboard_row(board_id, updates)
+            update_color_match_board(board_id, updates)
 
             # 配方
             has_formula = any(p.strip() for p in pigments)
@@ -216,7 +218,10 @@ def render_edit_page():
                     embedding,
                     now
                 )
-                update_colorboard_row(board_id, {"EmbeddingStatus": "Y", "LastUpdate": now})
+                update_color_match_board(
+                    board_id,
+                    {"EmbeddingStatus": "Y", "LastUpdate": now},
+                )
 
             st.success("✅ 更新完成！")
             st.session_state.pop("edit_target", None)

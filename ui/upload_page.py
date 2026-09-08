@@ -259,7 +259,7 @@ def render_upload_page():
             # =====================
             # STEP 2 TURSO
             # =====================
-            formula_mode = resolve_formula_mode(
+            formula_resolution = resolve_formula_mode(
                 formula_id
             )
 
@@ -268,7 +268,7 @@ def render_upload_page():
                 "FormulaID": formula_id.strip(),
                 "Material": normalize_material(material),
                 "ImagePath": image_path,
-                "FormulaMode": str(formula_mode),
+                "FormulaMode": formula_resolution.formula_mode,
                 "RecipeStatus": recipe_status,
                 "EmbeddingStatus": "PROCESSING",
                 "Customer": customer,

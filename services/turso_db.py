@@ -200,9 +200,58 @@ def get_color_match_boards_by_formula_id(formula_id: str):
     return _read_color_match_boards("TRIM(formula_id) = ?", (clean_formula_id,))
 
 
+def get_color_match_board_by_id(board_id: str):
+    clean_board_id = str(board_id).strip()
+    if not clean_board_id:
+        return None
+    rows = _read_color_match_boards("id = ?", (clean_board_id,), limit=1)
+    return rows[0] if rows else None
+
+
 def get_recent_color_match_boards(limit: int = 20):
     safe_limit = max(1, min(int(limit), 100))
     return _read_color_match_boards(
         "formula_id IS NOT NULL AND TRIM(formula_id) != ''",
         limit=safe_limit,
     )
+
+
+def update_color_match_board(board_id: str, updates: dict):
+    column_map = {
+        "Material": "material",
+        "ImagePath": "image_path",
+        "FormulaID": "formula_id",
+        "FormulaMode": "formula_mode",
+        "RecipeStatus": "recipe_status",
+        "EmbeddingStatus": "embedding_status",
+        "Customer": "customer",
+        "ColorName": "color_name",
+        "Pantone": "pantone",
+        "CreateDate": "create_date",
+        "LastUpdate": "last_update",
+        "Remark": "remark",
+        "ImageBase64": "image_base64",
+    }
+    valid_updates = [
+        (column_map[key], value)
+        for key, value in updates.items()
+        if key in column_map
+    ]
+    if not valid_updates:
+        return
+
+    conn = get_turso_client()
+    try:
+        assignments = ", ".join(f"{column} = ?" for column, _ in valid_updates)
+        params = [value for _, value in valid_updates]
+        params.append(str(board_id).strip())
+        result = conn.execute(
+            f"UPDATE color_match_boards SET {assignments} WHERE id = ?",
+            tuple(params),
+        )
+        if getattr(result, "rows_affected", 1) == 0:
+            raise ValueError(f"找不到 ColorBoard ID：{board_id}")
+        conn.commit()
+        conn.sync()
+    finally:
+        conn.close()

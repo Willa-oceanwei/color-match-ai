@@ -111,6 +111,9 @@ def test_recent_boards_includes_rows_without_formula_and_bounds_limit(monkeypatc
     turso_db.get_recent_color_match_boards(limit=500)
 
     assert " WHERE " not in connection.query
+    assert "datetime(REPLACE" in connection.query
+    assert "last_update" in connection.query
+    assert "create_date" in connection.query
     assert connection.params == (100,)
 
 

@@ -241,7 +241,12 @@ def _sync_replica(conn):
         return False
 
 
-def _read_color_match_boards(where_clause="", params=(), limit=None):
+def _read_color_match_boards(
+    where_clause="",
+    params=(),
+    limit=None,
+    order_by="rowid DESC",
+):
     conn = get_turso_client()
     try:
         # Pull remote writes before reading the embedded replica. This is important
@@ -269,7 +274,7 @@ def _read_color_match_boards(where_clause="", params=(), limit=None):
         """
         if where_clause:
             query += f" WHERE {where_clause}"
-        query += " ORDER BY rowid DESC"
+        query += f" ORDER BY {order_by}"
         query_params = list(params)
         if limit is not None:
             query += " LIMIT ?"
@@ -302,7 +307,18 @@ def get_color_match_board_by_id(board_id: str):
 
 def get_recent_color_match_boards(limit: int = 20):
     safe_limit = max(1, min(int(limit), 100))
-    return _read_color_match_boards(limit=safe_limit)
+    # Legacy Sheet rows may be imported after newer Turso rows, so rowid does
+    # not represent the actual creation time. Slash-separated timestamps are
+    # normalized for SQLite before sorting.
+    return _read_color_match_boards(
+        limit=safe_limit,
+        order_by=(
+            "COALESCE("
+            "datetime(REPLACE(NULLIF(TRIM(last_update), ''), '/', '-')), "
+            "datetime(REPLACE(NULLIF(TRIM(create_date), ''), '/', '-'))"
+            ") DESC, rowid DESC"
+        ),
+    )
 
 
 def search_color_match_boards(keyword: str, limit: int = 50):

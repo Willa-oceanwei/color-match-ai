@@ -2,6 +2,24 @@ import streamlit as st
 import libsql
 
 
+COLOR_MATCH_COLUMNS = (
+    "ID",
+    "Material",
+    "ImagePath",
+    "FormulaID",
+    "FormulaMode",
+    "RecipeStatus",
+    "EmbeddingStatus",
+    "Customer",
+    "ColorName",
+    "Pantone",
+    "CreateDate",
+    "LastUpdate",
+    "Remark",
+    "ImageBase64",
+)
+
+
 def get_turso_client():
     url = st.secrets["TURSO_DATABASE_URL"]
     auth_token = st.secrets["TURSO_AUTH_TOKEN"]
@@ -107,10 +125,39 @@ def update_color_match_embedding_status(
         ),
     )
 
-def get_all_color_match_boards():
-    conn = get_turso_client()
+    conn.commit()
+    conn.sync()
+    conn.close()
 
-    result = conn.execute("""
+
+def _rows_to_color_match_boards(rows):
+    return [dict(zip(COLOR_MATCH_COLUMNS, row)) for row in rows]
+
+
+def _sync_replica(conn):
+    """Best-effort sync without making local reads unavailable."""
+    sync = getattr(conn, "sync", None)
+    if not callable(sync):
+        return False
+
+    try:
+        sync()
+        return True
+    except Exception:
+        # Turso may be temporarily unreachable during migration. The embedded
+        # replica can still contain useful data, so continue with the local read.
+        return False
+
+
+def _read_color_match_boards(where_clause="", params=(), limit=None):
+    conn = get_turso_client()
+    try:
+        # Pull remote writes before reading the embedded replica. This is important
+        # while multiple Streamlit instances are writing to Turso. If Turso is
+        # temporarily unavailable, continue with the local replica instead.
+        _sync_replica(conn)
+
+        query = """
         SELECT
             id,
             material,
@@ -127,32 +174,81 @@ def get_all_color_match_boards():
             remark,
             image_base64
         FROM color_match_boards
-        ORDER BY rowid DESC
-    """)
+        """
+        if where_clause:
+            query += f" WHERE {where_clause}"
+        query += " ORDER BY rowid DESC"
+        query_params = list(params)
+        if limit is not None:
+            query += " LIMIT ?"
+            query_params.append(limit)
 
-    rows = []
+        result = conn.execute(query, tuple(query_params))
+        return _rows_to_color_match_boards(result.rows)
+    finally:
+        conn.close()
 
-    for r in result.rows:
-        rows.append({
-            "ID": r[0],
-            "Material": r[1],
-            "ImagePath": r[2],
-            "FormulaID": r[3],
-            "FormulaMode": r[4],
-            "RecipeStatus": r[5],
-            "EmbeddingStatus": r[6],
-            "Customer": r[7],
-            "ColorName": r[8],
-            "Pantone": r[9],
-            "CreateDate": r[10],
-            "LastUpdate": r[11],
-            "Remark": r[12],
-            "ImageBase64": r[13],
-        })
 
-    conn.close()
-    return rows
+def get_all_color_match_boards():
+    return _read_color_match_boards()
 
-    conn.commit()
-    conn.sync()
-    conn.close()
+
+def get_color_match_boards_by_formula_id(formula_id: str):
+    clean_formula_id = str(formula_id).strip()
+    if not clean_formula_id:
+        return []
+    return _read_color_match_boards("TRIM(formula_id) = ?", (clean_formula_id,))
+
+
+def get_color_match_board_by_id(board_id: str):
+    clean_board_id = str(board_id).strip()
+    if not clean_board_id:
+        return None
+    rows = _read_color_match_boards("id = ?", (clean_board_id,), limit=1)
+    return rows[0] if rows else None
+
+
+def get_recent_color_match_boards(limit: int = 20):
+    safe_limit = max(1, min(int(limit), 100))
+    return _read_color_match_boards(limit=safe_limit)
+
+
+def update_color_match_board(board_id: str, updates: dict):
+    column_map = {
+        "Material": "material",
+        "ImagePath": "image_path",
+        "FormulaID": "formula_id",
+        "FormulaMode": "formula_mode",
+        "RecipeStatus": "recipe_status",
+        "EmbeddingStatus": "embedding_status",
+        "Customer": "customer",
+        "ColorName": "color_name",
+        "Pantone": "pantone",
+        "CreateDate": "create_date",
+        "LastUpdate": "last_update",
+        "Remark": "remark",
+        "ImageBase64": "image_base64",
+    }
+    valid_updates = [
+        (column_map[key], value)
+        for key, value in updates.items()
+        if key in column_map
+    ]
+    if not valid_updates:
+        return
+
+    conn = get_turso_client()
+    try:
+        assignments = ", ".join(f"{column} = ?" for column, _ in valid_updates)
+        params = [value for _, value in valid_updates]
+        params.append(str(board_id).strip())
+        result = conn.execute(
+            f"UPDATE color_match_boards SET {assignments} WHERE id = ?",
+            tuple(params),
+        )
+        if getattr(result, "rows_affected", 1) == 0:
+            raise ValueError(f"找不到 ColorBoard ID：{board_id}")
+        conn.commit()
+        conn.sync()
+    finally:
+        conn.close()

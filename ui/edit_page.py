@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime
 from services.google_sheet import append_formula_row, lookup_formula_by_id
 from services.turso_db import (
+    get_color_match_board_by_id,
     get_color_match_boards_by_formula_id,
     update_color_match_board,
 )
@@ -28,7 +29,10 @@ def render_edit_page():
     # =========================
     # 查詢
     # =========================
-    search_formula = st.text_input("輸入 FormulaID", placeholder="例如：52824")
+    search_formula = st.text_input(
+        "輸入 FormulaID 或色板 ID",
+        placeholder="例如：52824 或 ABS_TRIAL_20260908_143000",
+    )
 
     if st.button("🔍 查詢"):
         st.session_state.pop("edit_target", None)
@@ -36,6 +40,9 @@ def render_edit_page():
         if search_formula.strip():
             try:
                 rows = get_color_match_boards_by_formula_id(search_formula.strip())
+                if not rows:
+                    board = get_color_match_board_by_id(search_formula.strip())
+                    rows = [board] if board else []
             except Exception:
                 st.error("色板資料暫時無法讀取，可能正在同步 Turso，請稍後再試。")
                 return
@@ -43,9 +50,9 @@ def render_edit_page():
                 st.session_state["edit_targets"] = rows
                 st.session_state["edit_target"] = rows[0]
             else:
-                st.error(f"找不到 FormulaID：{search_formula}")
+                st.error(f"找不到 FormulaID 或色板 ID：{search_formula}")
         else:
-            st.warning("請輸入 FormulaID")
+            st.warning("請輸入 FormulaID 或色板 ID")
 
     # 如果 FormulaID 查到多筆，讓使用者選
     if "edit_targets" in st.session_state and len(st.session_state["edit_targets"]) > 1:
@@ -104,7 +111,11 @@ def render_edit_page():
     # 配方資料
     # =========================
     st.markdown("### 🧪 配方資料（選填）")
-    existing_formula = lookup_formula_by_id(str(row.get("FormulaID", "")))
+    try:
+        existing_formula = lookup_formula_by_id(str(row.get("FormulaID", "")))
+    except Exception:
+        existing_formula = []
+        st.warning("色板已載入，但目前無法從配方表載入色粉明細。")
     f = existing_formula[0] if existing_formula else {}
 
     col_a, col_b, col_c = st.columns(3)

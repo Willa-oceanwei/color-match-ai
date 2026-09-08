@@ -9,6 +9,7 @@ from services.formula_service import resolve_formula_mode
 from services.google_drive import write_uploaded_bytes, resolve_local_image_path
 from services.turso_db import (
     append_color_match_board,
+    get_color_match_board_by_id,
     update_color_match_embedding_status,
 )
 from services.id_utils import build_board_id, build_image_path, normalize_material
@@ -281,6 +282,15 @@ def render_upload_page():
             }
 
             append_color_match_board(row)
+
+            # Do not report a successful upload until the row can be read back.
+            # This catches replica/write issues immediately instead of leaving the
+            # user with a success message for a record that cannot be searched.
+            saved_row = get_color_match_board_by_id(board_id)
+            if not saved_row:
+                raise RuntimeError(
+                    "Turso 儲存驗證失敗：寫入後找不到色板資料，請重新上傳。"
+                )
 
             # =====================
             # STEP 2b FORMULA（選填）

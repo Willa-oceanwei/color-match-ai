@@ -210,10 +210,7 @@ def get_color_match_board_by_id(board_id: str):
 
 def get_recent_color_match_boards(limit: int = 20):
     safe_limit = max(1, min(int(limit), 100))
-    return _read_color_match_boards(
-        "formula_id IS NOT NULL AND TRIM(formula_id) != ''",
-        limit=safe_limit,
-    )
+    return _read_color_match_boards(limit=safe_limit)
 
 
 def update_color_match_board(board_id: str, updates: dict):

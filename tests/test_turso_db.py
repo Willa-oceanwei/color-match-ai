@@ -53,13 +53,13 @@ def test_formula_lookup_syncs_replica_and_maps_result(monkeypatch):
     assert result[0]["ColorName"] == "Red"
 
 
-def test_recent_formula_boards_uses_bounded_limit(monkeypatch):
+def test_recent_boards_includes_rows_without_formula_and_bounds_limit(monkeypatch):
     connection = FakeConnection([_row()])
     monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
 
     turso_db.get_recent_color_match_boards(limit=500)
 
-    assert "TRIM(formula_id) != ''" in connection.query
+    assert " WHERE " not in connection.query
     assert connection.params == (100,)
 
 

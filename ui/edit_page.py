@@ -4,6 +4,7 @@ from services.google_sheet import append_formula_row, lookup_formula_by_id
 from services.turso_db import (
     get_color_match_board_by_id,
     get_color_match_boards_by_formula_id,
+    search_color_match_boards,
     update_color_match_board,
 )
 from services.embedding_service import embed_image, upsert_embedding
@@ -30,8 +31,8 @@ def render_edit_page():
     # 查詢
     # =========================
     search_formula = st.text_input(
-        "輸入 FormulaID 或色板 ID",
-        placeholder="例如：52824 或 ABS_TRIAL_20260908_143000",
+        "搜尋 FormulaID、色板 ID、公司名稱或顏色",
+        placeholder="例如：52824、公司名稱或紅色",
     )
 
     if st.button("🔍 查詢"):
@@ -43,6 +44,8 @@ def render_edit_page():
                 if not rows:
                     board = get_color_match_board_by_id(search_formula.strip())
                     rows = [board] if board else []
+                if not rows:
+                    rows = search_color_match_boards(search_formula.strip())
             except Exception as error:
                 st.error("無法讀取色板資料庫；這不是正常的同步等待。")
                 st.caption(f"診斷訊息：{error}")
@@ -51,19 +54,21 @@ def render_edit_page():
                 st.session_state["edit_targets"] = rows
                 st.session_state["edit_target"] = rows[0]
             else:
-                st.error(f"找不到 FormulaID 或色板 ID：{search_formula}")
+                st.error(f"找不到配方、色板、公司或顏色：{search_formula}")
         else:
-            st.warning("請輸入 FormulaID 或色板 ID")
+            st.warning("請輸入 FormulaID、色板 ID、公司名稱或顏色")
 
     # 如果 FormulaID 查到多筆，讓使用者選
     if "edit_targets" in st.session_state and len(st.session_state["edit_targets"]) > 1:
         targets = st.session_state["edit_targets"]
-        options = [r["ID"] for r in targets]
+        options = [
+            f"{r.get('ColorName', '') or '未填顏色'}（料號："
+            f"{r.get('FormulaID', '') or r['ID']}）｜{r['ID']}"
+            for r in targets
+        ]
         selected = st.selectbox("找到多筆，請選擇要編輯的 ID", options)
-        for r in targets:
-            if r["ID"] == selected:
-                st.session_state["edit_target"] = r
-                break
+        selected_index = options.index(selected)
+        st.session_state["edit_target"] = targets[selected_index]
 
     if "edit_target" not in st.session_state:
         return

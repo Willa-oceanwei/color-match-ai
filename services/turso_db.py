@@ -305,6 +305,23 @@ def get_recent_color_match_boards(limit: int = 20):
     return _read_color_match_boards(limit=safe_limit)
 
 
+def search_color_match_boards(keyword: str, limit: int = 50):
+    clean_keyword = str(keyword or "").strip()
+    if not clean_keyword:
+        return []
+    safe_limit = max(1, min(int(limit), 100))
+    escaped_keyword = (
+        clean_keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+    like_keyword = f"%{escaped_keyword}%"
+    return _read_color_match_boards(
+        "(customer LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR color_name LIKE ? ESCAPE '\\' COLLATE NOCASE)",
+        (like_keyword, like_keyword),
+        limit=safe_limit,
+    )
+
+
 def update_color_match_board(board_id: str, updates: dict):
     column_map = {
         "Material": "material",

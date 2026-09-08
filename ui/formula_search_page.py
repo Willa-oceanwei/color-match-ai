@@ -9,6 +9,7 @@ from services.turso_db import (
     get_color_match_boards_by_formula_id,
     get_recent_color_match_boards,
     import_color_match_boards,
+    search_color_match_boards,
 )
 
 def _base64_to_image(b64: str):
@@ -26,8 +27,8 @@ def render_formula_search_page():
     )
 
     search_id = st.text_input(
-        "輸入配方編號或色板 ID",
-        placeholder="例如：52824 或 ABS_TRIAL_20260908_143000",
+        "搜尋配方編號、色板 ID、公司名稱或顏色",
+        placeholder="例如：52824、公司名稱或紅色",
     )
 
     with st.expander("📥 匯入 Google Sheet 舊色板"):
@@ -46,10 +47,10 @@ def render_formula_search_page():
                 st.caption(f"診斷訊息：{error}")
 
     if not search_id.strip():
-        st.info("請輸入配方編號或色板 ID，也可從下方最近新增紀錄確認。")
-        st.markdown("### 最近新增的色板")
+        st.info("請輸入配方編號、色板 ID、公司名稱或顏色。")
+        st.markdown("### 最近一筆記錄")
         try:
-            recent_rows = get_recent_color_match_boards(limit=20)
+            recent_rows = get_recent_color_match_boards(limit=1)
         except Exception as error:
             st.error("無法讀取色板資料庫；這不是正常的同步等待。")
             st.caption(f"診斷訊息：{error}")
@@ -59,10 +60,12 @@ def render_formula_search_page():
             st.dataframe(
                 [
                     {
-                        "配方編號": row.get("FormulaID", "") or "（未填）",
+                        "顏色（料號）": (
+                            f"{row.get('ColorName', '') or '（未填顏色）'}"
+                            f"（{row.get('FormulaID', '') or row.get('ID', '')}）"
+                        ),
                         "色板 ID": row.get("ID", ""),
                         "原料": row.get("Material", ""),
-                        "色名": row.get("ColorName", ""),
                         "客戶": row.get("Customer", ""),
                         "新增時間": row.get("LastUpdate", "")
                         or row.get("CreateDate", ""),
@@ -83,19 +86,28 @@ def render_formula_search_page():
         if not matched:
             board = get_color_match_board_by_id(search_id)
             matched = [board] if board else []
+        if not matched:
+            matched = search_color_match_boards(search_id)
     except Exception as error:
         st.error("無法讀取色板資料庫；這不是正常的同步等待。")
         st.caption(f"診斷訊息：{error}")
         return
 
     if not matched:
-        st.warning(f"查無配方編號或色板 ID：{search_id}")
+        st.warning(f"查無配方、色板、公司或顏色：{search_id}")
         return
 
     st.success(f"找到 {len(matched)} 筆色板")
 
     # 配方資料
-    matched_formula_id = str(matched[0].get("FormulaID", "") or "").strip()
+    matched_formula_ids = {
+        str(row.get("FormulaID", "") or "").strip()
+        for row in matched
+        if str(row.get("FormulaID", "") or "").strip()
+    }
+    matched_formula_id = (
+        next(iter(matched_formula_ids)) if len(matched_formula_ids) == 1 else ""
+    )
     try:
         formulas = lookup_formula_by_id(matched_formula_id) if matched_formula_id else []
     except Exception:
@@ -180,4 +192,7 @@ def render_formula_search_page():
             st.caption(f"Material: {row.get('Material', '')}")
             st.caption(f"Status: {row.get('RecipeStatus', '')}")
             st.caption(f"Customer: {row.get('Customer', '')}")
-            st.caption(f"ColorName: {row.get('ColorName', '')}")
+            item_number = row.get("FormulaID", "") or row.get("ID", "")
+            st.caption(
+                f"ColorName: {row.get('ColorName', '')}（料號：{item_number}）"
+            )

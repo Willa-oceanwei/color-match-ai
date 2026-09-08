@@ -114,6 +114,18 @@ def test_recent_boards_includes_rows_without_formula_and_bounds_limit(monkeypatc
     assert connection.params == (100,)
 
 
+def test_search_boards_by_customer_or_color_escapes_like_wildcards(monkeypatch):
+    connection = FakeConnection([_row()])
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.search_color_match_boards(" ACME_100% ")
+
+    assert result[0]["ColorName"] == "Red"
+    assert "customer LIKE" in connection.query
+    assert "color_name LIKE" in connection.query
+    assert connection.params == ("%ACME\\_100\\%%", "%ACME\\_100\\%%", 50)
+
+
 def test_read_uses_local_replica_when_sync_temporarily_fails(monkeypatch):
     connection = FakeConnection([_row()], sync_error=RuntimeError("offline"))
     monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)

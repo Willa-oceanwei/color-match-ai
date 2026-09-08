@@ -38,3 +38,49 @@ def init_color_match_tables():
     conn.commit()
     conn.sync()
     conn.close()
+    
+
+def append_color_match_board(row: dict):
+    conn = get_turso_client()
+
+    conn.execute(
+        """
+        INSERT INTO color_match_boards (
+            id,
+            material,
+            image_path,
+            formula_id,
+            formula_mode,
+            recipe_status,
+            embedding_status,
+            customer,
+            color_name,
+            pantone,
+            create_date,
+            last_update,
+            remark,
+            image_base64
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            row.get("ID", ""),
+            row.get("Material", ""),
+            row.get("ImagePath", ""),
+            row.get("FormulaID", ""),
+            row.get("FormulaMode", ""),
+            row.get("RecipeStatus", ""),
+            row.get("EmbeddingStatus", ""),
+            row.get("Customer", ""),
+            row.get("ColorName", ""),
+            row.get("Pantone", ""),
+            row.get("CreateDate", ""),
+            row.get("LastUpdate", ""),
+            row.get("Remark", ""),
+            row.get("ImageBase64", ""),
+        ),
+    )
+
+    conn.commit()
+    conn.sync()
+    conn.close()

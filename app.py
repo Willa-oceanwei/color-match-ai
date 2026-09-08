@@ -16,8 +16,11 @@ st.set_page_config(
 )
 try:
     init_color_match_tables()
+    st.success("✅ Turso 連線成功，color_match_boards 資料表已確認")
 except Exception as e:
-    st.error(f"Turso 初始化失敗：{e}")
+    st.error("❌ Turso 初始化失敗")
+    st.exception(e)
+    st.stop()
 
 # ======== 🚀 Modern Style ========
 def apply_modern_style():

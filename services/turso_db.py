@@ -38,7 +38,7 @@ def init_color_match_tables():
     conn.commit()
     conn.sync()
     conn.close()
-    
+
 
 def append_color_match_board(row: dict):
     conn = get_turso_client()
@@ -81,7 +81,16 @@ def append_color_match_board(row: dict):
         ),
     )
 
-    def update_color_match_embedding_status(board_id: str, status: str, last_update: str):
+    conn.commit()
+    conn.sync()
+    conn.close()
+
+
+def update_color_match_embedding_status(
+    board_id: str,
+    status: str,
+    last_update: str
+):
     conn = get_turso_client()
 
     conn.execute(

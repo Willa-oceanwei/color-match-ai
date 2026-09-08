@@ -171,7 +171,7 @@ def render_upload_page():
                 "Remark": remark,
                 "ImageBase64": image_base64,
             }
-            append_colorboard_row(row)
+            append_color_match_board(row)
 
             # =====================
             # STEP 2b FORMULA（選填）

@@ -2,8 +2,8 @@ import streamlit as st
 import base64
 import io
 from PIL import Image
-from services.google_sheet import get_all_colorboards, lookup_formula_by_id
-
+from services.google_sheet import lookup_formula_by_id
+from services.turso_db import get_all_color_match_boards
 
 def _base64_to_image(b64: str):
     try:

@@ -3,7 +3,13 @@ import base64
 import io
 from PIL import Image
 from services.google_sheet import lookup_formula_by_id
-from services.turso_db import get_all_color_match_boards
+from services.google_sheet import read_colorboard
+from services.turso_db import (
+    get_color_match_board_by_id,
+    get_color_match_boards_by_formula_id,
+    get_recent_color_match_boards,
+    import_color_match_boards,
+)
 
 def _base64_to_image(b64: str):
     try:
@@ -19,27 +25,82 @@ def render_formula_search_page():
         unsafe_allow_html=True
     )
 
-    formula_id = st.text_input("輸入配方編號", placeholder="例如：52824")
+    search_id = st.text_input(
+        "輸入配方編號或色板 ID",
+        placeholder="例如：52824 或 ABS_TRIAL_20260908_143000",
+    )
 
-    if not formula_id.strip():
-        st.info("請輸入配方編號")
+    with st.expander("📥 匯入 Google Sheet 舊色板"):
+        st.caption("只補進 Turso 尚未存在的色板 ID，不會覆蓋目前資料。")
+        if st.button("開始匯入舊色板", type="secondary"):
+            try:
+                with st.spinner("正在讀取 Google Sheet 並匯入 Turso…"):
+                    sheet_rows = read_colorboard()
+                    migration = import_color_match_boards(sheet_rows)
+                st.success(
+                    f"匯入完成：新增 {migration['inserted']} 筆、"
+                    f"略過 {migration['skipped']} 筆，共檢查 {migration['total']} 筆。"
+                )
+            except Exception as error:
+                st.error("Google Sheet 舊資料匯入失敗。")
+                st.caption(f"診斷訊息：{error}")
+
+    if not search_id.strip():
+        st.info("請輸入配方編號或色板 ID，也可從下方最近新增紀錄確認。")
+        st.markdown("### 最近新增的色板")
+        try:
+            recent_rows = get_recent_color_match_boards(limit=20)
+        except Exception as error:
+            st.error("無法讀取色板資料庫；這不是正常的同步等待。")
+            st.caption(f"診斷訊息：{error}")
+            return
+
+        if recent_rows:
+            st.dataframe(
+                [
+                    {
+                        "配方編號": row.get("FormulaID", "") or "（未填）",
+                        "色板 ID": row.get("ID", ""),
+                        "原料": row.get("Material", ""),
+                        "色名": row.get("ColorName", ""),
+                        "客戶": row.get("Customer", ""),
+                        "新增時間": row.get("LastUpdate", "")
+                        or row.get("CreateDate", ""),
+                    }
+                    for row in recent_rows
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
+        else:
+            st.caption("目前還沒有色板紀錄。")
         return
 
-    # 搜尋 ColorBoard
-    all_rows = get_all_color_match_boards()
-    matched = [
-        r for r in all_rows
-        if str(r.get("FormulaID", "")).strip() == formula_id.strip()
-    ]
+    # 可用配方編號或上傳完成時顯示的色板 ID 查詢。沒有配方編號的
+    # 留樣仍可透過色板 ID 找回。
+    try:
+        matched = get_color_match_boards_by_formula_id(search_id)
+        if not matched:
+            board = get_color_match_board_by_id(search_id)
+            matched = [board] if board else []
+    except Exception as error:
+        st.error("無法讀取色板資料庫；這不是正常的同步等待。")
+        st.caption(f"診斷訊息：{error}")
+        return
 
     if not matched:
-        st.warning(f"查無配方編號：{formula_id}")
+        st.warning(f"查無配方編號或色板 ID：{search_id}")
         return
 
     st.success(f"找到 {len(matched)} 筆色板")
 
     # 配方資料
-    formulas = lookup_formula_by_id(formula_id.strip())
+    matched_formula_id = str(matched[0].get("FormulaID", "") or "").strip()
+    try:
+        formulas = lookup_formula_by_id(matched_formula_id) if matched_formula_id else []
+    except Exception:
+        formulas = []
+        st.warning("色板已找到，但目前無法從配方表載入色粉明細。")
 
     if formulas:
         f = formulas[0]

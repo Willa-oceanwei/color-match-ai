@@ -28,7 +28,7 @@ def apply_modern_style():
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
 
 .stApp, [data-testid="stAppViewContainer"] {
-    background: #0a0a0a !important;
+    background: radial-gradient(circle at 80% 0%, #102438 0, #0b1118 32%, #080c11 72%) !important;
     font-family: 'Inter', 'DM Mono', sans-serif !important;
 }
 
@@ -80,23 +80,68 @@ def apply_modern_style():
 }
 
 .block-container {
-    padding-top: 4px;
-    padding-left: 22px;
-    padding-right: 22px;
+    max-width: 1180px;
+    padding-top: 32px;
+    padding-left: 34px;
+    padding-right: 34px;
+    padding-bottom: 56px;
+}
+
+.page-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 26px 0;
+    padding-bottom: 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.page-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border: 1px solid rgba(98,184,231,0.25);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(31,91,128,0.7), rgba(18,52,76,0.45));
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    font-size: 22px;
+}
+
+.page-eyebrow {
+    margin-bottom: 3px;
+    color: #62b8e7;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+}
+
+.page-title {
+    color: #f4f8fb;
+    font-size: 25px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.page-description {
+    margin-top: 5px;
+    color: #91a4b7;
+    font-size: 13px;
 }
 
 input, textarea {
-    background: #161616 !important;
+    background: rgba(16,24,33,0.92) !important;
     color: #ffffff !important;
     border: 1px solid rgba(255,255,255,0.12) !important;
-    border-radius: 6px !important;
+    border-radius: 9px !important;
     font-family: 'DM Mono', monospace !important;
 }
 
 div.block-container .stButton > button {
-    background: #0b2f4a !important;
+    background: linear-gradient(180deg, #174f73, #103b58) !important;
     color: white !important;
-    border-radius: 6px !important;
+    border-radius: 9px !important;
     border: 1px solid rgba(255,255,255,0.12) !important;
     font-weight: 600 !important;
 }
@@ -112,6 +157,24 @@ div.block-container .stButton > button[kind="primary"] {
 div[data-testid="stDataFrame"] {
     border-radius: 8px;
     overflow: hidden;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(17, 27, 37, 0.72);
+    border-color: rgba(255,255,255,0.09) !important;
+    border-radius: 12px !important;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    background: rgba(16,24,33,0.72) !important;
+    border: 1px dashed rgba(98,184,231,0.32) !important;
+    border-radius: 12px !important;
+}
+
+[data-testid="stExpander"] {
+    background: rgba(17,27,37,0.55);
+    border-color: rgba(255,255,255,0.08) !important;
+    border-radius: 10px !important;
 }
 
 div[data-baseweb="popover"] {
@@ -191,9 +254,6 @@ def render_sidebar():
 # ======== Main ========
 apply_modern_style()
 render_sidebar()
-
-st.title("Color-Match-AI")
-st.caption("對色案例庫：樣品 → 拍照 → 上傳 → 找最相似色板 → 顯示配方")
 
 menu = st.session_state.get("menu")
 

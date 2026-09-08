@@ -70,7 +70,7 @@ class Settings:
         "FORMULA_SPREADSHEET_ID", "1s3wfckJbCnJYHHftEzy4N5kEo1KMe767IwaGZzamYqA"
     )
     formula_worksheet_name: str = _get(
-        "FORMULA_WORKSHEET_NAME", "Formula"
+        "FORMULA_WORKSHEET_NAME", "配方管理"
     )
     google_drive_root_folder_id: str = _get(
         "GOOGLE_DRIVE_ROOT_FOLDER_ID", ""

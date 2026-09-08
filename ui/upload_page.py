@@ -7,7 +7,8 @@ from config import SETTINGS
 from services.embedding_service import embed_image, upsert_embedding
 from services.formula_service import resolve_formula_mode
 from services.google_drive import write_uploaded_bytes, resolve_local_image_path
-from services.google_sheet import append_colorboard_row, update_embedding_status
+from services.google_sheet import update_embedding_status
+from services.turso_db import append_color_match_board
 from services.id_utils import build_board_id, build_image_path, normalize_material
 
 

@@ -4,7 +4,7 @@ import io
 import streamlit as st
 from PIL import Image
 
-from services.turso_db import find_color_match_boards
+from services import turso_db
 from ui.design import render_page_header
 
 
@@ -24,6 +24,39 @@ def _render_image(value: str, empty_message: str, caption: str):
         st.image(image, use_container_width=True, caption=caption)
     else:
         st.warning(f"{caption}無法顯示")
+
+
+def _find_boards(filters: dict):
+    """Use the filtered query, with a safe fallback for rolling deployments.
+
+    Streamlit can briefly retain an older imported ``turso_db`` module while
+    deploying the UI files. Importing the module instead of a newly added symbol
+    keeps application startup available during that window.
+    """
+    finder = getattr(turso_db, "find_color_match_boards", None)
+    if callable(finder):
+        return finder(filters)
+
+    # Compatibility path for an older in-memory service module. This is only
+    # evaluated after the user submits at least one filter, never on page load.
+    rows = turso_db.get_all_color_match_boards()
+    matches = []
+    for row in rows:
+        matched = True
+        for key, expected in filters.items():
+            expected = str(expected or "").strip()
+            if not expected:
+                continue
+            actual = str(row.get(key, "") or "").strip()
+            if key == "Material":
+                matched = actual.casefold() == expected.casefold()
+            else:
+                matched = expected.casefold() in actual.casefold()
+            if not matched:
+                break
+        if matched:
+            matches.append(row)
+    return matches[:100]
 
 
 def render_board_search_page():
@@ -67,7 +100,7 @@ def render_board_search_page():
             st.session_state.pop("board_search_results", None)
         else:
             try:
-                st.session_state["board_search_results"] = find_color_match_boards(filters)
+                st.session_state["board_search_results"] = _find_boards(filters)
             except Exception as error:
                 st.error("無法讀取色板資料庫")
                 st.caption(f"診斷訊息：{error}")

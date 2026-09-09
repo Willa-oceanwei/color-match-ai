@@ -5,7 +5,7 @@ import streamlit as st
 
 from services.google_drive import resolve_local_image_path, write_uploaded_bytes_get_base64
 from services.id_utils import build_sample_image_path
-from services.turso_db import search_color_match_boards, update_color_match_sample_archive
+from services import turso_db
 from ui.board_search_page import _render_image
 from ui.design import render_page_header
 
@@ -26,7 +26,9 @@ def render_sample_archive_page():
             st.session_state.pop("sample_archive_results", None)
         else:
             try:
-                st.session_state["sample_archive_results"] = search_color_match_boards(keyword)
+                st.session_state["sample_archive_results"] = (
+                    turso_db.search_color_match_boards(keyword)
+                )
             except Exception as error:
                 st.error("無法讀取色板資料庫")
                 st.caption(f"診斷訊息：{error}")
@@ -107,7 +109,12 @@ def render_sample_archive_page():
                     raise ValueError(f"客戶樣品照 {index} 寫入失敗")
                 updates[f"SampleImage{index}Path"] = path
                 updates[f"SampleImage{index}Base64"] = image_base64
-            update_color_match_sample_archive(selected["ID"], updates)
+            updater = getattr(turso_db, "update_color_match_sample_archive", None)
+            if callable(updater):
+                updater(selected["ID"], updates)
+            else:
+                # Partial update keys preserve photos that were not uploaded.
+                turso_db.update_color_match_board(selected["ID"], updates)
             selected.update(updates)
             st.success("樣品留存已儲存")
         except Exception as error:

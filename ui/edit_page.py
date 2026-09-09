@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime
+from pathlib import Path
 from services.google_sheet import append_formula_row
 from services.formula_repository import lookup_formula_by_id
 from services.turso_db import (
@@ -10,6 +11,7 @@ from services.turso_db import (
 )
 from services.embedding_service import embed_image, upsert_embedding
 from services.google_drive import write_uploaded_bytes_get_base64, resolve_local_image_path
+from services.id_utils import build_sample_image_path
 import base64
 import io
 from PIL import Image
@@ -208,6 +210,7 @@ def render_edit_page():
                 "RecipeStatus": recipe_status,
                 "Remark": remark,
                 "LastUpdate": now,
+                "SampleDescription": sample_description,
             }
 
             # 更換圖片
@@ -217,6 +220,30 @@ def render_edit_page():
                 _, image_base64 = write_uploaded_bytes_get_base64(content, image_path)
                 updates["ImageBase64"] = image_base64
                 updates["EmbeddingStatus"] = "PROCESSING"
+
+            # 樣品照各自更新，且不觸發主色板 embedding。
+            for sample_index, sample_upload in enumerate(sample_uploads, start=1):
+                if sample_upload is None:
+                    continue
+                sample_path = build_sample_image_path(
+                    row.get("Material", ""),
+                    board_id,
+                    sample_index,
+                    Path(sample_upload.name).suffix,
+                )
+                try:
+                    sample_path, sample_base64 = write_uploaded_bytes_get_base64(
+                        sample_upload.getvalue(), sample_path
+                    )
+                    local_sample_path = resolve_local_image_path(sample_path)
+                    if not local_sample_path.exists() or local_sample_path.stat().st_size == 0:
+                        raise ValueError("寫入後找不到圖片")
+                except Exception as error:
+                    raise RuntimeError(
+                        f"客戶樣品照 {sample_index} 寫入失敗：{error}"
+                    ) from error
+                updates[f"SampleImage{sample_index}Path"] = sample_path
+                updates[f"SampleImage{sample_index}Base64"] = sample_base64
 
             update_color_match_board(board_id, updates)
 

@@ -48,6 +48,9 @@ def search_top_k(material: str | None, image_path, top_k: int = 5):
             "score": round(score, 4),
             "image_path": item["ImagePath"],
             "image_base64": item.get("ImageBase64", ""),  # 加這行
+            "sample_image_1_base64": item.get("SampleImage1Base64", ""),
+            "sample_image_2_base64": item.get("SampleImage2Base64", ""),
+            "sample_description": item.get("SampleDescription", ""),
             "formula_id": item.get("FormulaID", ""),
             "recipe_status": item.get("RecipeStatus", "UNKNOWN"),
             "material": item.get("Material", ""),

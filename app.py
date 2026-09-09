@@ -1,27 +1,22 @@
-import traceback
-import os
-
 import streamlit as st
 from ui.search_page import render_search_page
-from ui.upload_page import render_upload_page
-from ui.formula_search_page import render_formula_search_page
-from ui.edit_page import render_edit_page
+from ui.board_search_page import render_board_search_page
+from ui.board_management_page import render_board_management_page
 from services.turso_db import init_color_match_tables
 
 st.set_page_config(
     page_title="color-match-ai",
-    page_icon="💡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 try:
     init_color_match_tables()
 except Exception as e:
-    st.error("❌ Turso 初始化失敗")
+    st.error("Turso 初始化失敗")
     st.exception(e)
     st.stop()
 
-# ======== 🚀 Modern Style ========
+# ======== Modern Style ========
 def apply_modern_style():
     st.markdown("""
 <style>
@@ -94,19 +89,6 @@ def apply_modern_style():
     margin: 0 0 26px 0;
     padding-bottom: 22px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-
-.page-icon {
-    display: grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
-    border: 1px solid rgba(98,184,231,0.25);
-    border-radius: 14px;
-    background: linear-gradient(145deg, rgba(31,91,128,0.7), rgba(18,52,76,0.45));
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    font-size: 22px;
 }
 
 .page-eyebrow {
@@ -223,31 +205,24 @@ label, [data-testid="stWidgetLabel"] p {
 # ======== Sidebar Menu ========
 def render_sidebar():
     MENU_ITEMS = [
-        {"group": "色彩", "key": "相似色搜尋",   "label": "🔍 相似色搜尋"},
-        {"group": "色彩", "key": "搜尋配方色板", "label": "🧪 搜尋配方色板"},
-        {"group": "色彩", "key": "上傳色板",     "label": "⬆️ 上傳色板"},
-        {"group": "色彩", "key": "修改色板資料", "label": "✏️ 修改色板資料"},
+        "相似色板搜尋",
+        "色板查詢",
+        "色板管理",
     ]
 
     if "menu" not in st.session_state:
-        st.session_state.menu = "相似色搜尋"
+        st.session_state.menu = "相似色板搜尋"
 
     with st.sidebar:
         st.markdown("<div class='erp-title' style='font-size: 24px; font-weight: bold;'>Color-Match-AI</div>", unsafe_allow_html=True)
-        st.markdown("<div class='erp-sub' style='font-size: 12px; color: #888888;'>v1.0 · 色彩知識庫</div>", unsafe_allow_html=True)
-
-        current_group = None
         for item in MENU_ITEMS:
-            if item["group"] != current_group:
-                st.markdown(f"<div class='erp-group'>{item['group']}</div>", unsafe_allow_html=True)
-                current_group = item["group"]
             if st.button(
-                item["label"],
-                key=item["key"],
+                item,
+                key=f"navigation_{item}",
                 use_container_width=True,
-                type="primary" if st.session_state.menu == item["key"] else "secondary"
+                type="primary" if st.session_state.menu == item else "secondary"
             ):
-                st.session_state.menu = item["key"]
+                st.session_state.menu = item
                 st.rerun()
 
 
@@ -257,11 +232,9 @@ render_sidebar()
 
 menu = st.session_state.get("menu")
 
-if menu == "上傳色板":
-    render_upload_page()
-elif menu == "搜尋配方色板":
-    render_formula_search_page()
-elif menu == "修改色板資料":
-    render_edit_page()
+if menu == "色板查詢":
+    render_board_search_page()
+elif menu == "色板管理":
+    render_board_management_page()
 else:
     render_search_page()

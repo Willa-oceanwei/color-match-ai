@@ -58,3 +58,20 @@ def build_image_path(
         ext = "." + ext
 
     return f"{material}/{board_id}{ext}"
+
+
+def build_sample_image_path(
+        material: str,
+        board_id: str,
+        sample_index: int,
+        extension: str = ".jpg"):
+    """Build a stable path for one of the two non-embedding sample photos."""
+    if sample_index not in (1, 2):
+        raise ValueError("sample_index 必須是 1 或 2")
+
+    material = normalize_material(material)
+    ext = extension.lower()
+    if not ext.startswith("."):
+        ext = "." + ext
+
+    return f"{material}/{board_id}_sample{sample_index}{ext}"

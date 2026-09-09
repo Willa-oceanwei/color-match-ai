@@ -6,6 +6,7 @@ from services.turso_db import init_color_match_tables
 
 st.set_page_config(
     page_title="color-match-ai",
+    page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded"
 )

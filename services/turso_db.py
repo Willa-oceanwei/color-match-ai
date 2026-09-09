@@ -19,6 +19,11 @@ COLOR_MATCH_COLUMNS = (
     "LastUpdate",
     "Remark",
     "ImageBase64",
+    "SampleImage1Path",
+    "SampleImage1Base64",
+    "SampleImage2Path",
+    "SampleImage2Base64",
+    "SampleDescription",
 )
 
 COLOR_MATCH_SCHEMA = {
@@ -36,6 +41,11 @@ COLOR_MATCH_SCHEMA = {
     "last_update": "TEXT",
     "remark": "TEXT",
     "image_base64": "TEXT",
+    "sample_image_1_path": "TEXT",
+    "sample_image_1_base64": "TEXT",
+    "sample_image_2_path": "TEXT",
+    "sample_image_2_base64": "TEXT",
+    "sample_description": "TEXT",
 }
 
 
@@ -88,7 +98,12 @@ def init_color_match_tables():
                 create_date TEXT,
                 last_update TEXT,
                 remark TEXT,
-                image_base64 TEXT
+                image_base64 TEXT,
+                sample_image_1_path TEXT,
+                sample_image_1_base64 TEXT,
+                sample_image_2_path TEXT,
+                sample_image_2_base64 TEXT,
+                sample_description TEXT
             )
         """)
 
@@ -132,9 +147,14 @@ def append_color_match_board(row: dict):
             create_date,
             last_update,
             remark,
-            image_base64
+            image_base64,
+            sample_image_1_path,
+            sample_image_1_base64,
+            sample_image_2_path,
+            sample_image_2_base64,
+            sample_description
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             row.get("ID", ""),
@@ -151,6 +171,11 @@ def append_color_match_board(row: dict):
             row.get("LastUpdate", ""),
             row.get("Remark", ""),
             row.get("ImageBase64", ""),
+            row.get("SampleImage1Path", ""),
+            row.get("SampleImage1Base64", ""),
+            row.get("SampleImage2Path", ""),
+            row.get("SampleImage2Base64", ""),
+            row.get("SampleDescription", ""),
         ),
     )
 
@@ -176,9 +201,11 @@ def import_color_match_boards(rows: list[dict]):
                 INSERT INTO color_match_boards (
                     id, material, image_path, formula_id, formula_mode,
                     recipe_status, embedding_status, customer, color_name,
-                    pantone, create_date, last_update, remark, image_base64
+                    pantone, create_date, last_update, remark, image_base64,
+                    sample_image_1_path, sample_image_1_base64,
+                    sample_image_2_path, sample_image_2_base64, sample_description
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO NOTHING
                 """,
                 (
@@ -196,6 +223,11 @@ def import_color_match_boards(rows: list[dict]):
                     row.get("LastUpdate", ""),
                     row.get("Remark", ""),
                     row.get("ImageBase64", ""),
+                    row.get("SampleImage1Path", ""),
+                    row.get("SampleImage1Base64", ""),
+                    row.get("SampleImage2Path", ""),
+                    row.get("SampleImage2Base64", ""),
+                    row.get("SampleDescription", ""),
                 ),
             )
             if getattr(cursor, "rowcount", 1) == 0:
@@ -283,7 +315,12 @@ def _read_color_match_boards(
             create_date,
             last_update,
             remark,
-            image_base64
+            image_base64,
+            sample_image_1_path,
+            sample_image_1_base64,
+            sample_image_2_path,
+            sample_image_2_base64,
+            sample_description
         FROM color_match_boards
         """
         if where_clause:
@@ -346,10 +383,62 @@ def search_color_match_boards(keyword: str, limit: int = 50):
     like_keyword = f"%{escaped_keyword}%"
     return _read_color_match_boards(
         "(customer LIKE ? ESCAPE '\\' COLLATE NOCASE "
-        "OR color_name LIKE ? ESCAPE '\\' COLLATE NOCASE)",
-        (like_keyword, like_keyword),
+        "OR color_name LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR formula_id LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR pantone LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR id LIKE ? ESCAPE '\\' COLLATE NOCASE)",
+        (like_keyword,) * 5,
         limit=safe_limit,
     )
+
+
+def find_color_match_boards(filters: dict, limit: int = 100):
+    """Find boards using only the non-empty fields supplied by the query UI."""
+    column_map = {
+        "FormulaID": "formula_id",
+        "Customer": "customer",
+        "ColorName": "color_name",
+        "Pantone": "pantone",
+        "Material": "material",
+        "ID": "id",
+    }
+    clauses = []
+    params = []
+    for key, column in column_map.items():
+        value = str(filters.get(key, "") or "").strip()
+        if not value:
+            continue
+        if key == "Material":
+            clauses.append("TRIM(material) = ? COLLATE NOCASE")
+            params.append(value)
+        else:
+            escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            clauses.append(f"{column} LIKE ? ESCAPE '\\' COLLATE NOCASE")
+            params.append(f"%{escaped}%")
+    if not clauses:
+        return []
+    return _read_color_match_boards(
+        " AND ".join(clauses), tuple(params), limit=max(1, min(int(limit), 100))
+    )
+
+
+def update_color_match_sample_archive(board_id: str, updates: dict):
+    """Update only explicitly changed sample archive fields.
+
+    Omitting a photo key preserves its current value. Embedding fields are not
+    accepted here, so archiving evidence can never alter the main-board vector.
+    """
+    allowed = {
+        "SampleImage1Path",
+        "SampleImage1Base64",
+        "SampleImage2Path",
+        "SampleImage2Base64",
+        "SampleDescription",
+        "LastUpdate",
+    }
+    sample_updates = {key: value for key, value in updates.items() if key in allowed}
+    if sample_updates:
+        update_color_match_board(board_id, sample_updates)
 
 
 def get_similar_formula_ids(formula_id: str, limit: int = 5):
@@ -459,6 +548,11 @@ def update_color_match_board(board_id: str, updates: dict):
         "LastUpdate": "last_update",
         "Remark": "remark",
         "ImageBase64": "image_base64",
+        "SampleImage1Path": "sample_image_1_path",
+        "SampleImage1Base64": "sample_image_1_base64",
+        "SampleImage2Path": "sample_image_2_path",
+        "SampleImage2Base64": "sample_image_2_base64",
+        "SampleDescription": "sample_description",
     }
     valid_updates = [
         (column_map[key], value)

@@ -2,11 +2,10 @@ import streamlit as st
 from decimal import Decimal, InvalidOperation
 
 
-def render_page_header(icon: str, eyebrow: str, title: str, description: str):
+def render_page_header(eyebrow: str, title: str, description: str):
     st.markdown(
         f"""
         <div class="page-hero">
-            <div class="page-icon">{icon}</div>
             <div>
                 <div class="page-eyebrow">{eyebrow}</div>
                 <div class="page-title">{title}</div>

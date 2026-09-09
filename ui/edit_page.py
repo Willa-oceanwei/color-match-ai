@@ -25,7 +25,7 @@ def _base64_to_image(b64: str):
 
 def render_edit_page():
     render_page_header(
-        "✏️", "BOARD EDITOR", "修改色板資料",
+        "BOARD EDITOR", "編輯色板",
         "搜尋既有色板後，更新基本資料、配方內容或照片。",
     )
 
@@ -37,7 +37,7 @@ def render_edit_page():
         placeholder="例如：52824、公司名稱或紅色",
     )
 
-    if st.button("🔍 查詢"):
+    if st.button("查詢"):
         st.session_state.pop("edit_target", None)
         st.session_state.pop("edit_targets", None)
         if search_formula.strip():
@@ -77,7 +77,7 @@ def render_edit_page():
 
     row = st.session_state["edit_target"]
     board_id = row["ID"]
-    st.success(f"✅ 已載入：{board_id}")
+    st.success(f"已載入：{board_id}")
 
     # =========================
     # 現有圖片
@@ -86,7 +86,7 @@ def render_edit_page():
     if b64:
         img = _base64_to_image(b64)
         if img:
-            st.image(img, width=200, caption="目前圖片")
+            st.image(img, width=200, caption="色板照片")
 
     # =========================
     # 編輯基本資料
@@ -113,12 +113,38 @@ def render_edit_page():
     with col5:
         remark = st.text_input("Remark", value=row.get("Remark", ""), key="edit_remark")
     with col6:
-        new_image = st.file_uploader("更換圖片（選填）", type=["jpg", "jpeg", "png"], key="edit_image")
+        new_image = st.file_uploader("更換色板照片（選填）", type=["jpg", "jpeg", "png"], key="edit_image")
+
+    # =========================
+    # 客戶樣品留存
+    # =========================
+    st.markdown("### 客戶樣品留存")
+    st.caption("樣品照請至「樣品留存」頁籤補登或更換；此處僅供確認。")
+    sample_columns = st.columns(2)
+    for sample_index, column in enumerate(sample_columns, start=1):
+        with column:
+            sample_b64 = row.get(f"SampleImage{sample_index}Base64", "") or ""
+            if sample_b64:
+                sample_image = _base64_to_image(sample_b64)
+                if sample_image:
+                    st.image(
+                        sample_image,
+                        use_container_width=True,
+                        caption=f"客戶樣品照 {sample_index}",
+                    )
+                else:
+                    st.warning(f"客戶樣品照 {sample_index} 無法顯示")
+            else:
+                st.info(f"尚未留存客戶樣品照 {sample_index}")
+    if row.get("SampleDescription"):
+        st.markdown(f"**樣品說明：**  {row['SampleDescription']}")
+    else:
+        st.caption("未填寫樣品說明")
 
     # =========================
     # 配方資料
     # =========================
-    st.markdown("### 🧪 配方資料（選填）")
+    st.markdown("### 配方資料（選填）")
     try:
         existing_formula = lookup_formula_by_id(str(row.get("FormulaID", "")))
     except Exception:
@@ -172,7 +198,7 @@ def render_edit_page():
     # =========================
     # 儲存
     # =========================
-    if st.button("💾 儲存更新"):
+    if st.button("儲存更新"):
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         try:
             updates = {
@@ -242,11 +268,11 @@ def render_edit_page():
                     {"EmbeddingStatus": "Y", "LastUpdate": now},
                 )
 
-            st.success("✅ 更新完成！")
+            st.success("更新完成")
             st.session_state.pop("edit_target", None)
             st.session_state.pop("edit_targets", None)
 
         except Exception as e:
             import traceback
-            st.error(f"❌ ERROR: {str(e)}")
+            st.error(f"ERROR: {str(e)}")
             st.code(traceback.format_exc())

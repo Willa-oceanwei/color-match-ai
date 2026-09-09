@@ -79,6 +79,7 @@ def _row(formula_id="52824"):
         "ABS_52824", "ABS", "ABS/image.jpg", formula_id, "EXISTING",
         "OFFICIAL", "Y", "Customer", "Red", "186 C", "2026/09/08",
         "2026/09/08 10:00", "", "base64",
+        "ABS/sample1.jpg", "sample1base64", "", "", "客戶提供原件",
     )
 
 
@@ -92,6 +93,8 @@ def test_formula_lookup_syncs_replica_and_maps_result(monkeypatch):
     assert connection.params == ("52824",)
     assert result[0]["FormulaID"] == "52824"
     assert result[0]["ColorName"] == "Red"
+    assert result[0]["SampleImage1Path"] == "ABS/sample1.jpg"
+    assert result[0]["SampleDescription"] == "客戶提供原件"
 
 
 def test_formula_lookup_supports_db_api_cursor(monkeypatch):
@@ -126,7 +129,34 @@ def test_search_boards_by_customer_or_color_escapes_like_wildcards(monkeypatch):
     assert result[0]["ColorName"] == "Red"
     assert "customer LIKE" in connection.query
     assert "color_name LIKE" in connection.query
-    assert connection.params == ("%ACME\\_100\\%%", "%ACME\\_100\\%%", 50)
+    assert connection.params == ("%ACME\\_100\\%%",) * 5 + (50,)
+
+
+def test_find_boards_uses_only_supplied_filters(monkeypatch):
+    connection = FakeConnection([_row()])
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.find_color_match_boards({
+        "FormulaID": "52824",
+        "Pantone": "186 C",
+        "Material": "ABS",
+    })
+
+    assert result[0]["ID"] == "ABS_52824"
+    assert "formula_id LIKE" in connection.query
+    assert "pantone LIKE" in connection.query
+    assert "TRIM(material) =" in connection.query
+    assert connection.params == ("%52824%", "%186 C%", "ABS", 100)
+
+
+def test_find_boards_does_not_query_without_filters(monkeypatch):
+    monkeypatch.setattr(
+        turso_db,
+        "get_turso_client",
+        lambda: (_ for _ in ()).throw(AssertionError("must not connect")),
+    )
+
+    assert turso_db.find_color_match_boards({}) == []
 
 
 def test_similar_formula_ids_rank_nearest_match(monkeypatch):
@@ -210,6 +240,51 @@ def test_update_color_match_board_writes_turso(monkeypatch):
     assert connection.events == ["execute", "commit", "sync", "close"]
 
 
+def test_update_color_match_board_updates_samples_in_one_connection(monkeypatch):
+    connection = FakeConnection([])
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    turso_db.update_color_match_board(
+        "ABS_52824",
+        {
+            "SampleImage1Path": "ABS/ABS_52824_sample1.png",
+            "SampleImage1Base64": "sample-data",
+            "SampleDescription": "正面為標準面",
+        },
+    )
+
+    assert "sample_image_1_path = ?" in connection.query
+    assert "sample_image_1_base64 = ?" in connection.query
+    assert "sample_description = ?" in connection.query
+    assert connection.events.count("execute") == 1
+
+
+def test_sample_archive_preserves_omitted_photos_and_embedding(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        turso_db,
+        "update_color_match_board",
+        lambda board_id, updates: captured.update(board_id=board_id, updates=updates),
+    )
+
+    turso_db.update_color_match_sample_archive(
+        "ABS_52824",
+        {
+            "SampleImage2Base64": "replacement",
+            "SampleDescription": "中央為準",
+            "EmbeddingStatus": "FAILED",
+        },
+    )
+
+    assert captured["board_id"] == "ABS_52824"
+    assert captured["updates"] == {
+        "SampleImage2Base64": "replacement",
+        "SampleDescription": "中央為準",
+    }
+    assert "SampleImage1Base64" not in captured["updates"]
+    assert "EmbeddingStatus" not in captured["updates"]
+
+
 def test_get_color_match_board_by_id_returns_first_match(monkeypatch):
     connection = FakeConnection([_row()])
     monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
@@ -233,6 +308,24 @@ def test_init_adds_columns_missing_from_an_existing_database(monkeypatch):
         "ALTER TABLE color_match_boards ADD COLUMN last_update TEXT",
     }
     assert connection.events[-3:] == ["commit", "sync", "close"]
+
+
+def test_init_adds_all_sample_columns_to_legacy_database(monkeypatch):
+    legacy_columns = set(turso_db.COLOR_MATCH_SCHEMA) - {
+        "sample_image_1_path",
+        "sample_image_1_base64",
+        "sample_image_2_path",
+        "sample_image_2_base64",
+        "sample_description",
+    }
+    connection = SchemaConnection(legacy_columns)
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    turso_db.init_color_match_tables()
+
+    alter_queries = [query for query in connection.queries if query.startswith("ALTER")]
+    assert len(alter_queries) == 5
+    assert all("ADD COLUMN sample_" in query for query in alter_queries)
 
 
 def test_init_supports_db_api_cursor_without_rows_attribute(monkeypatch):

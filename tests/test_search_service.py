@@ -12,7 +12,14 @@ def test_cosine_similarity_zero_vector():
 
 def test_search_without_material_loads_vectors_for_all_materials(monkeypatch):
     boards = [
-        {"ID": "ABS_1", "Material": "ABS", "ImagePath": "a", "FormulaID": "1"},
+        {
+            "ID": "ABS_1",
+            "Material": "ABS",
+            "ImagePath": "a",
+            "FormulaID": "1",
+            "SampleImage1Base64": "sample-one",
+            "SampleDescription": "正面為標準面",
+        },
         {"ID": "PP_2", "Material": "PP", "ImagePath": "b", "FormulaID": "2"},
     ]
     loaded_materials = []
@@ -30,3 +37,6 @@ def test_search_without_material_loads_vectors_for_all_materials(monkeypatch):
 
     assert loaded_materials == ["ABS", "PP"]
     assert {result["id"] for result in results} == {"ABS_1", "PP_2"}
+    abs_result = next(result for result in results if result["id"] == "ABS_1")
+    assert abs_result["sample_image_1_base64"] == "sample-one"
+    assert abs_result["sample_description"] == "正面為標準面"

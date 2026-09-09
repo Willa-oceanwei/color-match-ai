@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime
+from pathlib import Path
 from services.google_sheet import append_formula_row
 from services.formula_repository import lookup_formula_by_id
 from services.turso_db import (
@@ -10,6 +11,7 @@ from services.turso_db import (
 )
 from services.embedding_service import embed_image, upsert_embedding
 from services.google_drive import write_uploaded_bytes_get_base64, resolve_local_image_path
+from services.id_utils import build_sample_image_path
 import base64
 import io
 from PIL import Image
@@ -86,7 +88,7 @@ def render_edit_page():
     if b64:
         img = _base64_to_image(b64)
         if img:
-            st.image(img, width=200, caption="目前圖片")
+            st.image(img, width=200, caption="色板照片")
 
     # =========================
     # 編輯基本資料
@@ -113,7 +115,42 @@ def render_edit_page():
     with col5:
         remark = st.text_input("Remark", value=row.get("Remark", ""), key="edit_remark")
     with col6:
-        new_image = st.file_uploader("更換圖片（選填）", type=["jpg", "jpeg", "png"], key="edit_image")
+        new_image = st.file_uploader("更換色板照片（選填）", type=["jpg", "jpeg", "png"], key="edit_image")
+
+    # =========================
+    # 客戶樣品留存
+    # =========================
+    st.markdown("### 客戶樣品留存")
+    st.caption("樣品照僅供歷史留存及人工核對，不會用於 AI 搜尋或 embedding。")
+    sample_columns = st.columns(2)
+    sample_uploads = []
+    for sample_index, column in enumerate(sample_columns, start=1):
+        with column:
+            sample_b64 = row.get(f"SampleImage{sample_index}Base64", "") or ""
+            if sample_b64:
+                sample_image = _base64_to_image(sample_b64)
+                if sample_image:
+                    st.image(
+                        sample_image,
+                        use_container_width=True,
+                        caption=f"客戶樣品照 {sample_index}",
+                    )
+                else:
+                    st.warning(f"客戶樣品照 {sample_index} 無法顯示")
+            else:
+                st.info(f"尚未留存客戶樣品照 {sample_index}")
+            sample_uploads.append(st.file_uploader(
+                f"重新上傳 / 更換客戶樣品照 {sample_index}",
+                type=["jpg", "jpeg", "png"],
+                key=f"edit_sample_image_{sample_index}",
+            ))
+
+    sample_description = st.text_area(
+        "樣品說明",
+        value=row.get("SampleDescription", "") or "",
+        height=100,
+        key="edit_sample_description",
+    )
 
     # =========================
     # 配方資料
@@ -182,6 +219,7 @@ def render_edit_page():
                 "RecipeStatus": recipe_status,
                 "Remark": remark,
                 "LastUpdate": now,
+                "SampleDescription": sample_description,
             }
 
             # 更換圖片
@@ -191,6 +229,30 @@ def render_edit_page():
                 _, image_base64 = write_uploaded_bytes_get_base64(content, image_path)
                 updates["ImageBase64"] = image_base64
                 updates["EmbeddingStatus"] = "PROCESSING"
+
+            # 樣品照各自更新，且不觸發主色板 embedding。
+            for sample_index, sample_upload in enumerate(sample_uploads, start=1):
+                if sample_upload is None:
+                    continue
+                sample_path = build_sample_image_path(
+                    row.get("Material", ""),
+                    board_id,
+                    sample_index,
+                    Path(sample_upload.name).suffix,
+                )
+                try:
+                    sample_path, sample_base64 = write_uploaded_bytes_get_base64(
+                        sample_upload.getvalue(), sample_path
+                    )
+                    local_sample_path = resolve_local_image_path(sample_path)
+                    if not local_sample_path.exists() or local_sample_path.stat().st_size == 0:
+                        raise ValueError("寫入後找不到圖片")
+                except Exception as error:
+                    raise RuntimeError(
+                        f"客戶樣品照 {sample_index} 寫入失敗：{error}"
+                    ) from error
+                updates[f"SampleImage{sample_index}Path"] = sample_path
+                updates[f"SampleImage{sample_index}Base64"] = sample_base64
 
             update_color_match_board(board_id, updates)
 

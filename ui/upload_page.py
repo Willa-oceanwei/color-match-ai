@@ -12,7 +12,12 @@ from services.turso_db import (
     get_color_match_board_by_id,
     update_color_match_embedding_status,
 )
-from services.id_utils import build_board_id, build_image_path, normalize_material
+from services.id_utils import (
+    build_board_id,
+    build_image_path,
+    build_sample_image_path,
+    normalize_material,
+)
 from ui.design import render_page_header
 
 
@@ -158,9 +163,38 @@ def render_upload_page():
     # =========================
     # IMAGE
     # =========================
-    uploaded = st.file_uploader(
-        "上傳色板照片",
-        type=["jpg", "jpeg", "png"]
+    st.markdown("### 照片資料")
+    photo_col, sample_col_1, sample_col_2 = st.columns(3)
+    with photo_col:
+        uploaded = st.file_uploader(
+            "色板照片",
+            type=["jpg", "jpeg", "png"],
+            help="必填；此照片會用於建立 AI embedding。",
+        )
+        st.caption("必填")
+    with sample_col_1:
+        sample_image_1 = st.file_uploader(
+            "客戶樣品照 1",
+            type=["jpg", "jpeg", "png"],
+            help="選填；僅供歷史留存及人工核對。",
+        )
+        st.caption("選填")
+    with sample_col_2:
+        sample_image_2 = st.file_uploader(
+            "客戶樣品照 2",
+            type=["jpg", "jpeg", "png"],
+            help="選填；僅供歷史留存及人工核對。",
+        )
+        st.caption("選填")
+
+    st.caption("樣品照用於保存客戶當時提供的實物依據，方便日後確認是否拿錯樣品。")
+    sample_description = st.text_area(
+        "樣品說明",
+        placeholder=(
+            "例如：客戶提供原件、正面為標準面、舊批次樣品、"
+            "有刮傷請以未刮區域為準..."
+        ),
+        height=100,
     )
 
     # =========================
@@ -259,6 +293,35 @@ def render_upload_page():
             ):
                 raise ValueError("Image write failed")
 
+            sample_values = {}
+            for sample_index, sample_upload in enumerate(
+                (sample_image_1, sample_image_2), start=1
+            ):
+                if sample_upload is None:
+                    sample_values[f"SampleImage{sample_index}Path"] = ""
+                    sample_values[f"SampleImage{sample_index}Base64"] = ""
+                    continue
+
+                sample_path = build_sample_image_path(
+                    material,
+                    board_id,
+                    sample_index,
+                    Path(sample_upload.name).suffix,
+                )
+                try:
+                    sample_path, sample_base64 = write_uploaded_bytes_get_base64(
+                        sample_upload.getvalue(), sample_path
+                    )
+                    sample_full_path = SETTINGS.local_drive_root / sample_path
+                    if not sample_full_path.exists() or sample_full_path.stat().st_size == 0:
+                        raise ValueError("寫入後找不到圖片")
+                except Exception as error:
+                    raise RuntimeError(
+                        f"客戶樣品照 {sample_index} 寫入失敗：{error}"
+                    ) from error
+                sample_values[f"SampleImage{sample_index}Path"] = sample_path
+                sample_values[f"SampleImage{sample_index}Base64"] = sample_base64
+
             # =====================
             # STEP 2 TURSO
             # =====================
@@ -281,6 +344,8 @@ def render_upload_page():
                 "LastUpdate": now,
                 "Remark": remark,
                 "ImageBase64": image_base64,
+                "SampleDescription": sample_description,
+                **sample_values,
             }
 
             append_color_match_board(row)

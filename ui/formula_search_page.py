@@ -201,7 +201,8 @@ def render_formula_search_page():
                 unsafe_allow_html=True
             )
 
-    # 色板圖片
+    # 色板列表僅顯示主圖；樣品照片在單筆展開時才解碼，避免列表一次
+    # 載入大量圖片。
     cols = st.columns(3)
 
     for i, row in enumerate(matched):
@@ -223,3 +224,44 @@ def render_formula_search_page():
             st.caption(
                 f"ColorName: {row.get('ColorName', '')}（料號：{item_number}）"
             )
+
+            with st.expander("查看客戶樣品留存"):
+                st.markdown("**色板照片**")
+                if b64:
+                    board_image = _base64_to_image(b64)
+                    if board_image:
+                        st.image(board_image, use_container_width=True)
+                    else:
+                        st.warning("色板照片無法顯示")
+                else:
+                    st.info("無色板照片")
+
+                st.markdown("**客戶樣品留存**")
+                available_samples = [
+                    (sample_index, row.get(f"SampleImage{sample_index}Base64", "") or "")
+                    for sample_index in (1, 2)
+                    if row.get(f"SampleImage{sample_index}Base64", "")
+                ]
+                if available_samples:
+                    sample_columns = st.columns(len(available_samples))
+                    for column, (sample_index, sample_b64) in zip(
+                        sample_columns, available_samples
+                    ):
+                        with column:
+                            sample_image = _base64_to_image(sample_b64)
+                            if sample_image:
+                                st.image(
+                                    sample_image,
+                                    use_container_width=True,
+                                    caption=f"客戶樣品照 {sample_index}",
+                                )
+                            else:
+                                st.warning(f"客戶樣品照 {sample_index} 無法顯示")
+                else:
+                    st.info("未留存樣品照")
+
+                sample_description = row.get("SampleDescription", "") or ""
+                if sample_description:
+                    st.markdown(f"**樣品說明：**  {sample_description}")
+                else:
+                    st.caption("未填寫樣品說明")

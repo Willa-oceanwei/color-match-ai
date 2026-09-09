@@ -383,10 +383,62 @@ def search_color_match_boards(keyword: str, limit: int = 50):
     like_keyword = f"%{escaped_keyword}%"
     return _read_color_match_boards(
         "(customer LIKE ? ESCAPE '\\' COLLATE NOCASE "
-        "OR color_name LIKE ? ESCAPE '\\' COLLATE NOCASE)",
-        (like_keyword, like_keyword),
+        "OR color_name LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR formula_id LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR pantone LIKE ? ESCAPE '\\' COLLATE NOCASE "
+        "OR id LIKE ? ESCAPE '\\' COLLATE NOCASE)",
+        (like_keyword,) * 5,
         limit=safe_limit,
     )
+
+
+def find_color_match_boards(filters: dict, limit: int = 100):
+    """Find boards using only the non-empty fields supplied by the query UI."""
+    column_map = {
+        "FormulaID": "formula_id",
+        "Customer": "customer",
+        "ColorName": "color_name",
+        "Pantone": "pantone",
+        "Material": "material",
+        "ID": "id",
+    }
+    clauses = []
+    params = []
+    for key, column in column_map.items():
+        value = str(filters.get(key, "") or "").strip()
+        if not value:
+            continue
+        if key == "Material":
+            clauses.append("TRIM(material) = ? COLLATE NOCASE")
+            params.append(value)
+        else:
+            escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            clauses.append(f"{column} LIKE ? ESCAPE '\\' COLLATE NOCASE")
+            params.append(f"%{escaped}%")
+    if not clauses:
+        return []
+    return _read_color_match_boards(
+        " AND ".join(clauses), tuple(params), limit=max(1, min(int(limit), 100))
+    )
+
+
+def update_color_match_sample_archive(board_id: str, updates: dict):
+    """Update only explicitly changed sample archive fields.
+
+    Omitting a photo key preserves its current value. Embedding fields are not
+    accepted here, so archiving evidence can never alter the main-board vector.
+    """
+    allowed = {
+        "SampleImage1Path",
+        "SampleImage1Base64",
+        "SampleImage2Path",
+        "SampleImage2Base64",
+        "SampleDescription",
+        "LastUpdate",
+    }
+    sample_updates = {key: value for key, value in updates.items() if key in allowed}
+    if sample_updates:
+        update_color_match_board(board_id, sample_updates)
 
 
 def get_similar_formula_ids(formula_id: str, limit: int = 5):

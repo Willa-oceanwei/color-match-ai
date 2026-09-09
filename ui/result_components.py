@@ -16,16 +16,9 @@ def _base64_to_image(b64: str):
 
 def render_result_card(index: int, result: dict):
     score = result["score"]
-    if score > 0.85:
-        color = "🟢"
-    elif score > 0.70:
-        color = "🟡"
-    else:
-        color = "🔴"
-
     with st.container():
         st.markdown(f"""
-        ##### {color} Rank #{index} | 相似度：{score:.2%}
+        ##### Rank #{index} | 相似度：{score:.2%}
         **ID**：{result["id"]}  
         **Material**：{result["material"]}  
         **Formula**：{result["formula_id"]}  
@@ -82,7 +75,7 @@ def render_result_card(index: int, result: dict):
             if sample_description:
                 st.markdown(f"**樣品說明：**  {sample_description}")
 
-        with st.expander("🧪 查看配方 (Formula)"):
+        with st.expander("查看配方 (Formula)"):
             formula_id = result.get("formula_id", "")
 
             if not formula_id:

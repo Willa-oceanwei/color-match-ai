@@ -28,7 +28,6 @@ def _use_suggested_formula(formula_id: str):
 
 def render_formula_search_page():
     render_page_header(
-        "🧪",
         "FORMULA LIBRARY",
         "搜尋配方色板",
         "以配方、色板、公司或顏色，快速找到歷史色板與配方明細。",
@@ -43,7 +42,7 @@ def render_formula_search_page():
             key="formula_search_query",
         )
     with tool_col:
-        with st.popover("⚙️ 資料維護", use_container_width=True):
+        with st.popover("資料維護", use_container_width=True):
             st.markdown("**匯入 Google Sheet 舊色板**")
             st.caption("僅補入 Turso 尚未存在的色板，不會覆蓋目前資料。")
             if st.button("開始匯入", type="secondary", use_container_width=True):
@@ -160,7 +159,7 @@ def render_formula_search_page():
                 })
 
         if pigment_data:
-            st.markdown("### 🧬 色粉明細")
+            st.markdown("### 色粉明細")
             st.table(pigment_data)
 
         if f.get("Remark"):

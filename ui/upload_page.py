@@ -43,7 +43,7 @@ def get_cached_embedding(material, path, fn):
 def render_upload_page():
 
     render_page_header(
-        "⬆️", "NEW COLOR BOARD", "新增色板",
+        "NEW COLOR BOARD", "新增色板",
         "建立色板基本資料、配方與影像向量，儲存後即可搜尋。",
     )
 
@@ -78,7 +78,7 @@ def render_upload_page():
     # =========================
     # 配方輸入（選填）
     # =========================
-    with st.expander("🧪 輸入配方資料（選填）"):
+    with st.expander("輸入配方資料（選填）"):
 
         col_a, col_b, col_c = st.columns(3)
 
@@ -243,7 +243,7 @@ def render_upload_page():
     )
 
     st.info(
-        "📸 拍攝建議：畫素 800×800 左右即可，"
+        "拍攝建議：畫素 800×800 左右即可，"
         "主體色板占畫面70%，D65光源，背景建議使用灰色底，"
         "焦距建議設為 3 倍"
     )
@@ -252,7 +252,7 @@ def render_upload_page():
     # BUTTON
     # =========================
     if st.button(
-        "🚀 儲存並建立向量",
+        "儲存並建立向量",
         disabled=uploaded is None
     ):
 
@@ -261,7 +261,7 @@ def render_upload_page():
             return
 
         if st.session_state.get("last_uploaded_id") == board_id:
-            st.warning("⚠️ 已上傳過，請勿重複送出")
+            st.warning("已上傳過，請勿重複送出")
             return
 
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
@@ -489,7 +489,7 @@ def render_upload_page():
             # DONE
             # =====================
             st.success(
-                "✅ 上傳完成（Turso + Vector + Image）"
+                "上傳完成（Turso + Vector + Image）"
             )
 
             if formula_id.strip():
@@ -509,7 +509,7 @@ def render_upload_page():
             import traceback
 
             st.error(
-                f"❌ ERROR: {str(e)}"
+                f"ERROR: {str(e)}"
             )
 
             st.code(

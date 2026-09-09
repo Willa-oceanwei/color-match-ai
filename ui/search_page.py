@@ -9,7 +9,7 @@ from ui.design import render_page_header
 def render_search_page():
 
     render_page_header(
-        "🔍", "VISUAL MATCH", "相近色板搜尋",
+        "VISUAL MATCH", "相似色板搜尋",
         "上傳樣品照片，從相同原料的案例中找出最接近的色板。",
     )
 
@@ -32,7 +32,7 @@ def render_search_page():
     # =====================
     # BUTTON
     # =====================
-    if st.button("🔍 Start Matching", disabled=uploaded is None):
+    if st.button("開始比對", disabled=uploaded is None):
         try:
             tmp_path = Path("tmp/query.jpg")
             tmp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -41,7 +41,7 @@ def render_search_page():
             results = search_top_k(material, tmp_path, top_k=5)
 
             if not results:
-                st.warning("⚠️ 沒有搜尋結果")
+                st.warning("沒有搜尋結果")
                 return
 
             st.success(f"找到 {len(results)} 筆結果")
@@ -55,11 +55,11 @@ def render_search_page():
             # NO DATA
             # =====================
             if results is None:
-                st.error("❌ results = None（search crash）")
+                st.error("results = None（search crash）")
                 return
 
             if len(results) == 0:
-                st.warning("⚠️ 沒有搜尋結果（results = []）")
+                st.warning("沒有搜尋結果（results = []）")
                 return
 
             # =====================

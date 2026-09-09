@@ -129,7 +129,34 @@ def test_search_boards_by_customer_or_color_escapes_like_wildcards(monkeypatch):
     assert result[0]["ColorName"] == "Red"
     assert "customer LIKE" in connection.query
     assert "color_name LIKE" in connection.query
-    assert connection.params == ("%ACME\\_100\\%%", "%ACME\\_100\\%%", 50)
+    assert connection.params == ("%ACME\\_100\\%%",) * 5 + (50,)
+
+
+def test_find_boards_uses_only_supplied_filters(monkeypatch):
+    connection = FakeConnection([_row()])
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    result = turso_db.find_color_match_boards({
+        "FormulaID": "52824",
+        "Pantone": "186 C",
+        "Material": "ABS",
+    })
+
+    assert result[0]["ID"] == "ABS_52824"
+    assert "formula_id LIKE" in connection.query
+    assert "pantone LIKE" in connection.query
+    assert "TRIM(material) =" in connection.query
+    assert connection.params == ("%52824%", "%186 C%", "ABS", 100)
+
+
+def test_find_boards_does_not_query_without_filters(monkeypatch):
+    monkeypatch.setattr(
+        turso_db,
+        "get_turso_client",
+        lambda: (_ for _ in ()).throw(AssertionError("must not connect")),
+    )
+
+    assert turso_db.find_color_match_boards({}) == []
 
 
 def test_similar_formula_ids_rank_nearest_match(monkeypatch):
@@ -230,6 +257,32 @@ def test_update_color_match_board_updates_samples_in_one_connection(monkeypatch)
     assert "sample_image_1_base64 = ?" in connection.query
     assert "sample_description = ?" in connection.query
     assert connection.events.count("execute") == 1
+
+
+def test_sample_archive_preserves_omitted_photos_and_embedding(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        turso_db,
+        "update_color_match_board",
+        lambda board_id, updates: captured.update(board_id=board_id, updates=updates),
+    )
+
+    turso_db.update_color_match_sample_archive(
+        "ABS_52824",
+        {
+            "SampleImage2Base64": "replacement",
+            "SampleDescription": "中央為準",
+            "EmbeddingStatus": "FAILED",
+        },
+    )
+
+    assert captured["board_id"] == "ABS_52824"
+    assert captured["updates"] == {
+        "SampleImage2Base64": "replacement",
+        "SampleDescription": "中央為準",
+    }
+    assert "SampleImage1Base64" not in captured["updates"]
+    assert "EmbeddingStatus" not in captured["updates"]
 
 
 def test_get_color_match_board_by_id_returns_first_match(monkeypatch):

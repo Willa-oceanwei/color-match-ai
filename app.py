@@ -1,8 +1,4 @@
 import streamlit as st
-from ui.search_page import render_search_page
-from ui.board_search_page import render_board_search_page
-from ui.board_management_page import render_board_management_page
-from services.turso_db import init_color_match_tables
 
 st.set_page_config(
     page_title="color-match-ai",
@@ -10,8 +6,18 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-try:
+
+
+@st.cache_resource(show_spinner=False)
+def initialize_database():
+    """Initialize the schema once per server process, not on every rerun."""
+    from services.turso_db import init_color_match_tables
+
     init_color_match_tables()
+
+
+try:
+    initialize_database()
 except Exception as e:
     st.error("Turso 初始化失敗")
     st.exception(e)
@@ -234,8 +240,17 @@ render_sidebar()
 menu = st.session_state.get("menu")
 
 if menu == "色板查詢":
+    # Page imports are intentionally lazy. Streamlit reruns this file after every
+    # interaction, so importing management-only SDKs on the landing page adds
+    # avoidable cold-start work.
+    from ui.board_search_page import render_board_search_page
+
     render_board_search_page()
 elif menu == "色板管理":
+    from ui.board_management_page import render_board_management_page
+
     render_board_management_page()
 else:
+    from ui.search_page import render_search_page
+
     render_search_page()

@@ -1,8 +1,6 @@
 from pathlib import Path
 import streamlit as st
 
-from ui.result_components import render_result_card
-from services.search_service import search_top_k
 from ui.design import render_page_header
 
 
@@ -34,6 +32,12 @@ def render_search_page():
     # =====================
     if st.button("開始比對", disabled=uploaded is None):
         try:
+            # NumPy, Pillow and the Google clients are only needed once a user
+            # actually starts a search. Keeping them out of the initial render
+            # makes the landing page available sooner on a cold process.
+            from services.search_service import search_top_k
+            from ui.result_components import render_result_card
+
             tmp_path = Path("tmp/query.jpg")
             tmp_path.parent.mkdir(parents=True, exist_ok=True)
             tmp_path.write_bytes(uploaded.getvalue())

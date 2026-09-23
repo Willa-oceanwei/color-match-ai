@@ -78,7 +78,7 @@ def render_upload_page():
     # =========================
     # 配方輸入（選填）
     # =========================
-    with st.expander("輸入配方資料（選填）"):
+    with st.expander("輸入配方資料（選填）", expanded=False):
 
         col_a, col_b, col_c = st.columns(3)
 
@@ -164,38 +164,37 @@ def render_upload_page():
     # IMAGE
     # =========================
     st.markdown("### 照片資料")
-    photo_col, sample_col_1, sample_col_2 = st.columns(3)
-    with photo_col:
-        uploaded = st.file_uploader(
-            "色板照片",
-            type=["jpg", "jpeg", "png"],
-            help="必填；此照片會用於建立 AI embedding。",
-        )
-        st.caption("必填")
-    with sample_col_1:
-        sample_image_1 = st.file_uploader(
-            "客戶樣品照 1",
-            type=["jpg", "jpeg", "png"],
-            help="選填；僅供歷史留存及人工核對。",
-        )
-        st.caption("選填")
-    with sample_col_2:
-        sample_image_2 = st.file_uploader(
-            "客戶樣品照 2",
-            type=["jpg", "jpeg", "png"],
-            help="選填；僅供歷史留存及人工核對。",
-        )
-        st.caption("選填")
-
-    st.caption("樣品照用於保存客戶當時提供的實物依據，方便日後確認是否拿錯樣品。")
-    sample_description = st.text_area(
-        "樣品說明",
-        placeholder=(
-            "例如：客戶提供原件、正面為標準面、舊批次樣品、"
-            "有刮傷請以未刮區域為準..."
-        ),
-        height=100,
+    uploaded = st.file_uploader(
+        "色板照片",
+        type=["jpg", "jpeg", "png"],
+        help="必填；此照片會用於建立 AI embedding。",
     )
+    st.caption("必填")
+
+    with st.expander("客戶樣品留存（選填）", expanded=False):
+        sample_col_1, sample_col_2 = st.columns(2)
+        with sample_col_1:
+            sample_image_1 = st.file_uploader(
+                "客戶樣品照 1",
+                type=["jpg", "jpeg", "png"],
+                help="選填；僅供歷史留存及人工核對。",
+            )
+        with sample_col_2:
+            sample_image_2 = st.file_uploader(
+                "客戶樣品照 2",
+                type=["jpg", "jpeg", "png"],
+                help="選填；僅供歷史留存及人工核對。",
+            )
+
+        st.caption("樣品照用於保存客戶當時提供的實物依據，方便日後確認是否拿錯樣品。")
+        sample_description = st.text_area(
+            "樣品說明",
+            placeholder=(
+                "例如：客戶提供原件、正面為標準面、舊批次樣品、"
+                "有刮傷請以未刮區域為準..."
+            ),
+            height=100,
+        )
 
     # =========================
     # RECIPE STATUS

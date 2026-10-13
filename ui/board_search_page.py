@@ -4,8 +4,9 @@ import io
 import streamlit as st
 from PIL import Image
 
+from services.formula_repository import lookup_formula_by_id
 from services import turso_db
-from ui.design import render_page_header
+from ui.design import format_quantity, render_page_header
 
 
 def _base64_to_image(value: str):
@@ -57,6 +58,80 @@ def _find_boards(filters: dict):
         if matched:
             matches.append(row)
     return matches[:100]
+
+
+def _lookup_board_formula(board: dict):
+    formula_id = str(board.get("FormulaID", "") or "").strip()
+    if not formula_id:
+        return []
+    return lookup_formula_by_id(formula_id)
+
+
+def _formula_pigment_rows(formulas: list[dict]):
+    pigment_data = []
+    for formula in formulas:
+        for index in range(1, 9):
+            pigment = formula.get(f"Pigment{index}", "")
+            weight = formula.get(f"Weight{index}", "")
+            if pigment:
+                pigment_data.append({
+                    "色粉編號": pigment,
+                    "重量 (g)": format_quantity(weight),
+                })
+        colorant = formula.get("Colorant", "")
+        ratio = formula.get("Ratio", "")
+        if colorant:
+            pigment_data.append({
+                "色粉編號": colorant,
+                "重量 (g)": format_quantity(ratio),
+            })
+    return pigment_data
+
+
+def _render_formula_details(board: dict):
+    st.markdown("### 配方資料")
+
+    formula_id = str(board.get("FormulaID", "") or "").strip()
+    if not formula_id:
+        st.info("此色板沒有配方編號，尚未連動正式配方管理。")
+        return
+
+    try:
+        formulas = _lookup_board_formula(board)
+    except Exception as error:
+        st.warning("目前無法從配方管理載入配方資料。")
+        st.caption(f"診斷訊息：{error}")
+        return
+
+    if not formulas:
+        st.info(f"配方管理查無資料（FormulaID: {formula_id}）")
+        return
+
+    formula = formulas[0]
+    if formula.get("FormulaSource"):
+        st.caption(f"配方來源：{formula['FormulaSource']}")
+
+    pigment_data = _formula_pigment_rows(formulas)
+
+    if pigment_data:
+        st.table(pigment_data)
+    else:
+        st.info("此配方目前沒有色粉明細。")
+
+    summary_columns = st.columns(4)
+    summary_items = [
+        ("添加比例", f"{formula.get('AddRatio', '-') or '-'} g/kg"),
+        ("淨重", f"{format_quantity(formula.get('NetWeight', '')) or '-'} {formula.get('NetWeightUnit', '') or 'g'}"),
+        ("合計類別", formula.get("TotalType", "") or "-"),
+        ("Pantone", formula.get("Pantone", "") or "-"),
+    ]
+    for column, (label, value) in zip(summary_columns, summary_items):
+        with column:
+            st.caption(label)
+            st.write(value)
+
+    if formula.get("Remark"):
+        st.caption(f"備註：{formula.get('Remark')}")
 
 
 def render_board_search_page():
@@ -155,6 +230,8 @@ def render_board_search_page():
             st.caption(label)
             st.write(value or "—")
     st.markdown(f"**備註：** {selected.get('Remark', '') or '—'}")
+
+    _render_formula_details(selected)
 
     photo_columns = st.columns(2)
     with photo_columns[0]:

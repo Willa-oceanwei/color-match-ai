@@ -17,7 +17,7 @@ def render_search_page():
         format_func=lambda value: "不限原料（只比顏色）" if value == "ALL" else value,
     )
     if material == "ALL":
-        st.caption("將跨原料搜尋；結果以顏色相近程度排序。")
+        st.caption("全部材質")
 
     uploaded = st.file_uploader(
         "上傳樣品",
@@ -25,12 +25,12 @@ def render_search_page():
     )
 
     if uploaded:
-        st.image(uploaded, caption="Query Sample")
+        st.image(uploaded, caption="查詢樣品", width=420)
 
     # =====================
     # BUTTON
     # =====================
-    if st.button("開始比對", disabled=uploaded is None):
+    if st.button("開始比對", disabled=uploaded is None, type="primary", icon=":material/image_search:"):
         try:
             # NumPy, Pillow and the Google clients are only needed once a user
             # actually starts a search. Keeping them out of the initial render

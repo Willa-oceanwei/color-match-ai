@@ -9,7 +9,6 @@ def render_page_header(eyebrow: str, title: str, description: str):
             <div>
                 <div class="page-eyebrow">{eyebrow}</div>
                 <div class="page-title">{title}</div>
-                <div class="page-description">{description}</div>
             </div>
         </div>
         """,

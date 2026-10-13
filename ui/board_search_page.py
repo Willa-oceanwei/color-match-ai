@@ -143,25 +143,25 @@ def render_board_search_page():
 
     first_row = st.columns(3)
     with first_row[0]:
-        formula_id = st.text_input("FormulaID", key="board_search_formula_id")
+        formula_id = st.text_input("配方編號", key="board_search_formula_id")
     with first_row[1]:
-        customer = st.text_input("Customer", key="board_search_customer")
+        customer = st.text_input("客戶", key="board_search_customer")
     with first_row[2]:
-        color_name = st.text_input("ColorName", key="board_search_color_name")
+        color_name = st.text_input("顏色名稱", key="board_search_color_name")
 
     second_row = st.columns(3)
     with second_row[0]:
         pantone = st.text_input("Pantone", key="board_search_pantone")
     with second_row[1]:
         material = st.selectbox(
-            "Material",
+            "材質",
             ["", "PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"],
             key="board_search_material",
         )
     with second_row[2]:
-        board_id = st.text_input("Board ID", key="board_search_id")
+        board_id = st.text_input("色板編號", key="board_search_id")
 
-    if st.button("查詢色板", key="board_search_submit"):
+    if st.button("查詢色板", key="board_search_submit", type="primary", icon=":material/search:"):
         filters = {
             "FormulaID": formula_id,
             "Customer": customer,
@@ -188,7 +188,8 @@ def render_board_search_page():
         st.info("找不到符合條件的色板")
         return
 
-    st.markdown("### 查詢結果")
+    st.divider()
+    st.markdown(f"### 查詢結果 · {len(rows)} 筆")
     st.dataframe(
         [{
             "FormulaID": row.get("FormulaID", ""),
@@ -201,6 +202,14 @@ def render_board_search_page():
         } for row in rows],
         use_container_width=True,
         hide_index=True,
+        column_config={
+            "FormulaID": "配方編號",
+            "Customer": "客戶",
+            "Material": "材質",
+            "ColorName": "顏色名稱",
+            "CreateDate": "建立日期",
+            "Board ID": "色板編號",
+        },
     )
     options = {
         (
@@ -212,7 +221,8 @@ def render_board_search_page():
     }
     selected = options[st.selectbox("選擇要查看的色板", list(options))]
 
-    st.markdown("### 完整資料")
+    st.divider()
+    st.markdown("### 色板資料")
     detail_columns = st.columns(3)
     details = [
         ("配方編號", selected.get("FormulaID", "")),
@@ -220,10 +230,10 @@ def render_board_search_page():
         ("材質", selected.get("Material", "")),
         ("顏色", selected.get("ColorName", "")),
         ("Pantone", selected.get("Pantone", "")),
-        ("RecipeStatus", selected.get("RecipeStatus", "")),
+        ("配方狀態", selected.get("RecipeStatus", "")),
         ("建立日期", selected.get("CreateDate", "")),
         ("最後更新", selected.get("LastUpdate", "")),
-        ("Board ID", selected.get("ID", "")),
+        ("色板編號", selected.get("ID", "")),
     ]
     for index, (label, value) in enumerate(details):
         with detail_columns[index % 3]:
@@ -231,8 +241,10 @@ def render_board_search_page():
             st.write(value or "—")
     st.markdown(f"**備註：** {selected.get('Remark', '') or '—'}")
 
+    st.divider()
     _render_formula_details(selected)
 
+    st.divider()
     photo_columns = st.columns(2)
     with photo_columns[0]:
         st.markdown("**色板照片**")

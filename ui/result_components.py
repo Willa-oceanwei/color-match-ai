@@ -118,34 +118,15 @@ def render_result_card(index: int, result: dict):
                     # =====================
                     # 配方資料（後顯示）
                     # =====================
-                    col_a, col_b, col_c, col_d = st.columns(4)
-
-                    with col_a:
-                        st.markdown(
-                            f"<div style='font-size:15px;color:#9fb6cc;'>添加比例</div>"
-                            f"<div style='font-size:15px;color:#ffffff;'>{f.get('AddRatio', '-')} g/kg</div>",
-                            unsafe_allow_html=True
-                        )
-
-                    with col_b:
-                        st.markdown(
-                            f"<div style='font-size:15px;color:#9fb6cc;'>淨重</div>"
-                            f"<div style='font-size:15px;color:#ffffff;'>{f.get('NetWeight', '-')} g</div>",
-                            unsafe_allow_html=True
-                        )
-
-                    with col_c:
-                        st.markdown(
-                            f"<div style='font-size:15px;color:#9fb6cc;'>合計類別</div>"
-                            f"<div style='font-size:15px;color:#ffffff;'>{f.get('TotalType', '-')}</div>",
-                            unsafe_allow_html=True
-                        )
-
-                    with col_d:
-                        st.markdown(
-                            f"<div style='font-size:11px;color:#9fb6cc;'>Pantone</div>"
-                            f"<div style='font-size:13px;color:#ffffff;'>{f.get('Pantone', '-')}</div>",
-                            unsafe_allow_html=True
-                        )
+                    summary_items = [
+                        ("添加比例", f"{f.get('AddRatio', '-') or '-'} g/kg"),
+                        ("淨重", f"{format_quantity(f.get('NetWeight', '')) or '-'} {f.get('NetWeightUnit', '') or 'g'}"),
+                        ("合計類別", f.get("TotalType", "") or "-"),
+                        ("Pantone", f.get("Pantone", "") or "-"),
+                    ]
+                    for column, (label, value) in zip(st.columns(4), summary_items):
+                        with column:
+                            st.caption(label)
+                            st.write(value)
 
         st.divider()

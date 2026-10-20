@@ -11,28 +11,35 @@ from ui.design import render_page_header
 def _roi_controls(label, key):
     if not st.checkbox(label, key=f'{key}_enabled'):
         return None
-    st.caption('請選擇色板內部的均勻區域，避開背景、文字與反光。')
+    st.caption('選取色板內部，避開背景、文字與反光。')
     left, right = st.slider('左右範圍（%）', 0, 100, (30, 70), key=f'{key}_x')
     top, bottom = st.slider('上下範圍（%）', 0, 100, (35, 75), key=f'{key}_y')
     return (left / 100, top / 100, right / 100, bottom / 100)
 
 
 def render_search_page():
+    with st.container(key='search_workspace'):
+        _render_search_workspace()
+
+
+def _render_search_workspace():
     from services.color_service import ColorRegionError, analyze_image
 
     render_page_header('COLOR MATCH', '相似色板搜尋',
                        '排除背景後比較色板顏色，色差越小越接近。')
-    material = st.selectbox('原料範圍', ['ALL', 'PP', 'ABS', 'TPR', 'NY', 'PC', 'PE', 'PVC', 'PS'],
-                            format_func=lambda v: '不限原料（只比顏色）' if v == 'ALL' else v)
-    uploaded = st.file_uploader('上傳樣品', type=['jpg', 'png', 'jpeg'])
-    show_preview = st.toggle('顯示取色預覽（桃紅色遮罩）', value=False, key='show_color_preview')
-    query_roi = _roi_controls('手動選擇樣品取色範圍', 'query_roi')
-    with st.expander('歷史色板取色設定'):
-        st.caption('預設自動排除與照片邊緣相連的背景。若照片構圖一致，可手動指定共同取色範圍。')
-        board_roi = _roi_controls('指定所有歷史照片的共同取色範圍', 'board_roi')
-        st.caption('手動範圍套用至所有候選照片，搜尋後請檢查每張取色預覽。')
-    max_delta_e = st.slider('可接受的最大照片色差 ΔE76', 1.0, 100.0, 20.0, 1.0)
-    st.caption('這是照片的估計色差，受光線與白平衡影響；不是配色成功率。20 為初始篩選值，可自行調整。')
+    material = st.selectbox('原料', ['ALL', 'PP', 'ABS', 'TPR', 'NY', 'PC', 'PE', 'PVC', 'PS'],
+                            format_func=lambda v: '全部原料' if v == 'ALL' else v)
+    uploaded = st.file_uploader('樣品照片', type=['jpg', 'png', 'jpeg'])
+    with st.expander('進階設定', expanded=False):
+        show_preview = st.toggle('顯示取色範圍', value=False, key='show_color_preview')
+        max_delta_e = st.number_input('色差上限（ΔE76）', min_value=1.0, max_value=100.0,
+                                      value=20.0, step=1.0, format='%.0f', key='search_max_delta_e',
+                                      help='數值越小，比對越嚴格；超過上限的色板不會顯示。')
+        query_roi = _roi_controls('手動選取樣品區域', 'query_roi')
+        board_roi = _roi_controls('指定歷史照片取色區域', 'board_roi')
+        if board_roi is not None:
+            st.caption('此範圍會套用至所有歷史照片，適合構圖一致的照片。')
+        st.caption('照片色差受光線影響，僅供比對參考。')
     profile = None
     if uploaded:
         st.image(uploaded, caption='查詢樣品', width=420)
@@ -44,6 +51,7 @@ def render_search_page():
                          caption='樣品取色預覽：桃紅色區域已排除；其餘區域參與比對', width=320)
         except (ColorRegionError, OSError, ValueError) as error:
             st.warning(str(error))
+            st.caption('請展開「進階設定」，手動選取樣品區域。')
 
     signature = (hashlib.sha256(uploaded.getvalue()).hexdigest(), material,
                  query_roi, board_roi, max_delta_e) if uploaded and profile else None
@@ -51,7 +59,7 @@ def render_search_page():
     if saved and saved['signature'] != signature:
         st.session_state.pop('color_search_results', None)
 
-    if st.button('開始比對', disabled=profile is None, type='primary', icon=':material/image_search:'):
+    if st.button('開始比對', disabled=profile is None, type='primary', use_container_width=True):
         from services.search_service import search_top_k
 
         diagnostics = {}

@@ -144,3 +144,21 @@ hr { border-color: var(--line) !important; margin: 22px 0 !important; }
     font-size: clamp(10px, 2.8vw, 14px);
     white-space: nowrap;
 }
+
+/* A focused search workspace with secondary controls tucked away. */
+.st-key-search_workspace {
+    width: 100%;
+    max-width: 860px;
+    margin-inline: auto;
+}
+.st-key-search_workspace .page-hero {
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+}
+.st-key-search_workspace [data-testid="stExpander"] {
+    background: transparent;
+    border-color: var(--line);
+}
+.st-key-search_workspace [data-testid="stFileUploaderDropzone"] {
+    padding: 18px;
+}

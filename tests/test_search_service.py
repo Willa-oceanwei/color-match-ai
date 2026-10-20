@@ -1,42 +1,60 @@
-from services import search_service
-from services.search_service import cosine_similarity
+import importlib.util
+from pathlib import Path
+import sys
+from types import ModuleType, SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+import numpy as np
 
 
-def test_cosine_similarity_identical_vectors():
-    assert cosine_similarity([1, 0], [1, 0]) == 1.0
+class SearchServiceTests(unittest.TestCase):
+    def setUp(self):
+        database = ModuleType('services.turso_db')
+        self.boards = [
+            {'ID': 'ABS_1', 'Material': 'ABS', 'ImageBase64': 'abs',
+             'FormulaID': '1', 'SampleImage1Base64': 'sample-one',
+             'SampleDescription': '正面為標準面'},
+            {'ID': 'PP_2', 'Material': 'PP', 'ImageBase64': 'pp', 'FormulaID': '2'},
+        ]
+        database.get_all_color_match_boards = lambda: self.boards
+        spec = importlib.util.spec_from_file_location(
+            '_search_service_test', Path(__file__).resolve().parents[1] / 'services/search_service.py')
+        self.search = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {'services.turso_db': database}):
+            spec.loader.exec_module(self.search)
+        def profile(lightness):
+            return SimpleNamespace(lab=np.array([lightness, 0, 0]), rgb=(100,100,100),
+                                   preview_base64='preview')
+        self.search.profile_from_path = lambda path, roi=None: profile(90)
+        self.loaded = []
+        def load_photo(encoded, roi=None):
+            self.loaded.append(encoded)
+            return profile(88 if encoded == 'abs' else 80)
+        self.search.profile_from_base64 = load_photo
+
+    def test_unrestricted_search_compares_both_materials_and_keeps_archive(self):
+        results = self.search.search_top_k('ALL', 'query.jpg')
+        self.assertEqual(self.loaded, ['abs', 'pp'])
+        self.assertEqual([item['id'] for item in results], ['ABS_1', 'PP_2'])
+        self.assertEqual(results[0]['sample_image_1_base64'], 'sample-one')
+        self.assertEqual(results[0]['sample_description'], '正面為標準面')
+        self.assertEqual(results[0]['delta_e'], 2)
+
+    def test_material_filter_is_case_insensitive(self):
+        results = self.search.search_top_k(' pp ', 'query.jpg')
+        self.assertEqual([item['id'] for item in results], ['PP_2'])
+        self.assertEqual(self.loaded, ['pp'])
+
+    def test_threshold_does_not_force_dissimilar_first_result(self):
+        report = {}
+        self.assertEqual(self.search.search_top_k('ALL', 'query.jpg', max_delta_e=1,
+                                                  diagnostics=report), [])
+        self.assertEqual(report['outside_threshold'], 2)
+
+    def test_top_k_limits_sorted_results(self):
+        self.assertEqual(len(self.search.search_top_k('ALL', 'query.jpg', top_k=1)), 1)
 
 
-def test_cosine_similarity_zero_vector():
-    assert cosine_similarity([0, 0], [1, 0]) == 0.0
-
-
-def test_search_without_material_loads_vectors_for_all_materials(monkeypatch):
-    boards = [
-        {
-            "ID": "ABS_1",
-            "Material": "ABS",
-            "ImagePath": "a",
-            "FormulaID": "1",
-            "SampleImage1Base64": "sample-one",
-            "SampleDescription": "正面為標準面",
-        },
-        {"ID": "PP_2", "Material": "PP", "ImagePath": "b", "FormulaID": "2"},
-    ]
-    loaded_materials = []
-    monkeypatch.setattr(search_service, "embed_image", lambda path: [1, 0])
-    monkeypatch.setattr(search_service, "get_all_color_match_boards", lambda: boards)
-
-    def load_vectors(material):
-        loaded_materials.append(material)
-        board_id = "ABS_1" if material == "ABS" else "PP_2"
-        return {"items": [{"id": board_id, "embedding": [1, 0]}]}
-
-    monkeypatch.setattr(search_service, "load_vector_store", load_vectors)
-
-    results = search_service.search_top_k("ALL", "query.jpg")
-
-    assert loaded_materials == ["ABS", "PP"]
-    assert {result["id"] for result in results} == {"ABS_1", "PP_2"}
-    abs_result = next(result for result in results if result["id"] == "ABS_1")
-    assert abs_result["sample_image_1_base64"] == "sample-one"
-    assert abs_result["sample_description"] == "正面為標準面"
+if __name__ == '__main__':
+    unittest.main()

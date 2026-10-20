@@ -1,82 +1,70 @@
-from pathlib import Path
+import base64
+from io import BytesIO
+
 import streamlit as st
+from PIL import Image
 
 from ui.design import render_page_header
 
 
+def _roi_controls(label, key):
+    if not st.checkbox(label, key=f'{key}_enabled'):
+        return None
+    st.caption('請選擇色板內部的均勻區域，避開背景、文字與反光。')
+    left, right = st.slider('左右範圍（%）', 0, 100, (30, 70), key=f'{key}_x')
+    top, bottom = st.slider('上下範圍（%）', 0, 100, (35, 75), key=f'{key}_y')
+    return (left / 100, top / 100, right / 100, bottom / 100)
+
+
 def render_search_page():
+    from services.color_service import ColorRegionError, analyze_image
 
-    render_page_header(
-        "VISUAL MATCH", "相似色板搜尋",
-        "上傳樣品照片，從相同原料的案例中找出最接近的色板。",
-    )
-
-    material = st.selectbox(
-        "原料範圍",
-        ["ALL", "PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS"],
-        format_func=lambda value: "不限原料（只比顏色）" if value == "ALL" else value,
-    )
-    if material == "ALL":
-        st.caption("全部材質")
-
-    uploaded = st.file_uploader(
-        "上傳樣品",
-        type=["jpg", "png", "jpeg"]
-    )
-
+    render_page_header('COLOR MATCH', '相似色板搜尋',
+                       '排除背景後比較色板顏色，色差越小越接近。')
+    material = st.selectbox('原料範圍', ['ALL', 'PP', 'ABS', 'TPR', 'NY', 'PC', 'PE', 'PVC', 'PS'],
+                            format_func=lambda v: '不限原料（只比顏色）' if v == 'ALL' else v)
+    uploaded = st.file_uploader('上傳樣品', type=['jpg', 'png', 'jpeg'])
+    query_roi = _roi_controls('手動選擇樣品取色範圍', 'query_roi')
+    with st.expander('歷史色板取色設定'):
+        st.caption('預設自動排除與照片邊緣相連的背景。若照片構圖一致，可手動指定共同取色範圍。')
+        board_roi = _roi_controls('指定所有歷史照片的共同取色範圍', 'board_roi')
+        st.caption('手動範圍套用至所有候選照片，搜尋後請檢查每張取色預覽。')
+    max_delta_e = st.slider('可接受的最大照片色差 ΔE76', 1.0, 100.0, 20.0, 1.0)
+    st.caption('這是照片的估計色差，受光線與白平衡影響；不是配色成功率。20 為初始篩選值，可自行調整。')
+    profile = None
     if uploaded:
-        st.image(uploaded, caption="查詢樣品", width=420)
-
-    # =====================
-    # BUTTON
-    # =====================
-    if st.button("開始比對", disabled=uploaded is None, type="primary", icon=":material/image_search:"):
+        st.image(uploaded, caption='查詢樣品', width=420)
         try:
-            # NumPy, Pillow and the Google clients are only needed once a user
-            # actually starts a search. Keeping them out of the initial render
-            # makes the landing page available sooner on a cold process.
-            from services.search_service import search_top_k
-            from ui.result_components import render_result_card
+            with Image.open(BytesIO(uploaded.getvalue())) as image:
+                profile = analyze_image(image, query_roi)
+            st.image(BytesIO(base64.b64decode(profile.preview_base64)),
+                     caption='樣品取色預覽：桃紅色區域已排除；其餘區域參與比對', width=320)
+        except (ColorRegionError, OSError, ValueError) as error:
+            st.warning(str(error))
 
-            tmp_path = Path("tmp/query.jpg")
-            tmp_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path.write_bytes(uploaded.getvalue())
+    if st.button('開始比對', disabled=profile is None, type='primary', icon=':material/image_search:'):
+        from services.search_service import search_top_k
+        from ui.result_components import render_result_card
 
-            results = search_top_k(material, tmp_path, top_k=5)
-
+        diagnostics = {}
+        try:
+            # In-memory per-request image avoids sharing tmp/query.jpg across users.
+            with st.spinner('正在排除背景並比較色差…'):
+                results = search_top_k(material, BytesIO(uploaded.getvalue()), top_k=5,
+                                       query_roi=query_roi, board_roi=board_roi,
+                                       max_delta_e=max_delta_e, diagnostics=diagnostics)
+            skipped = diagnostics.get('skipped', [])
+            if skipped:
+                st.warning(f'{len(skipped)} 張歷史照片無法可靠取色，已略過。')
+                with st.expander('查看略過原因'):
+                    st.dataframe(skipped, use_container_width=True)
+            st.caption(f"已比較 {diagnostics.get('compared', 0)} 張；"
+                       f"{diagnostics.get('outside_threshold', 0)} 張超過色差上限。")
             if not results:
-                st.warning("沒有搜尋結果")
-                return
-
-            st.success(f"找到 {len(results)} 筆結果")
-            for i, r in enumerate(results, 1):
-                render_result_card(i, r)
-
-        except Exception as e:
-            st.error(f"SEARCH ERROR: {e}")
-
-            # =====================
-            # NO DATA
-            # =====================
-            if results is None:
-                st.error("results = None（search crash）")
-                return
-
-            if len(results) == 0:
-                st.warning("沒有搜尋結果（results = []）")
-                return
-
-            # =====================
-            # RENDER
-            # =====================
-            st.success(f"找到 {len(results)} 筆結果")
-
-            for i, r in enumerate(results, 1):
-                try:
-                    render_result_card(i, r)
-                except Exception as e:
-                    st.error(f"render card error: {e}")
-                    st.write(r)
-
-        except Exception as e:
-            st.error(f"SEARCH ERROR: {e}")
+                st.warning('沒有符合色差上限的色板。請確認取色範圍，或調整色差上限。')
+            else:
+                st.success(f'找到 {len(results)} 筆結果')
+                for index, result in enumerate(results, 1):
+                    render_result_card(index, result)
+        except Exception as error:
+            st.error(f'搜尋失敗：{error}')

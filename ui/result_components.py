@@ -14,7 +14,7 @@ def _base64_to_image(b64: str):
         return None
 
 
-def render_result_card(index: int, result: dict):
+def render_result_card(index: int, result: dict, *, show_color_preview=False, query_image=None):
     with st.container():
         metric = (f"照片色差 ΔE76：{result['delta_e']:.2f}（越小越接近）"
                   if 'delta_e' in result else f"影像特徵相似度：{result['score']:.2%}")
@@ -31,18 +31,22 @@ def render_result_card(index: int, result: dict):
         with col1:
             st.caption("查詢樣品")
             try:
-                query_preview = _base64_to_image(result.get('query_preview_base64', ''))
+                query_preview = (_base64_to_image(result.get('query_preview_base64', ''))
+                                 if show_color_preview else None)
+                if query_image is not None:
+                    st.image(query_image, use_container_width=True)
                 if query_preview is not None:
                     st.image(query_preview, use_container_width=True)
                     st.caption('桃紅色區域已排除；其餘區域參與比對')
                     st.caption(f"代表色 RGB：{result.get('query_rgb', '')}")
-                else:
+                elif query_image is None:
                     st.info('查詢樣品無法顯示')
             except Exception:
                 st.info("查詢樣品無法顯示")
 
         with col2:
-            board_preview = _base64_to_image(result.get('board_preview_base64', ''))
+            board_preview = (_base64_to_image(result.get('board_preview_base64', ''))
+                             if show_color_preview else None)
             if board_preview is not None:
                 st.image(board_preview, caption='歷史色板取色範圍（桃紅色已排除）',
                          use_container_width=True)

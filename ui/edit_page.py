@@ -15,7 +15,7 @@ import io
 from PIL import Image
 from ui.design import render_page_header
 from ui.photo_editor import render_photo_editor, photo_is_modified
-from services.id_utils import build_image_path
+from services.id_utils import build_image_path, build_sample_image_path
 
 
 def _base64_to_image(b64: str):
@@ -130,12 +130,28 @@ def render_edit_page():
     # =========================
     # 客戶樣品留存
     # =========================
+    sample_changes = []
+    invalid_sample = False
     with st.expander("客戶樣品留存（選填）", expanded=False):
-        st.caption("樣品照請至「樣品留存」頁籤補登或更換；此處僅供確認。")
+        st.caption("可補上或更換任一張照片，未更換的照片會保留。")
         sample_columns = st.columns(2)
         for sample_index, column in enumerate(sample_columns, start=1):
             with column:
-                sample_b64 = row.get(f"SampleImage{sample_index}Base64", "") or ""
+                sample_upload = st.file_uploader(
+                    f'上傳／更換樣品照 {sample_index}', type=['jpg', 'jpeg', 'png'],
+                    key=f'edit_sample_upload_{board_id}_{sample_index}',
+                )
+                sample_bytes = render_photo_editor(
+                    sample_upload, key=f'edit_sample_photo_{board_id}_{sample_index}',
+                    allow_crop=True,
+                )
+                if sample_upload is not None:
+                    if sample_bytes is None:
+                        invalid_sample = True
+                    else:
+                        sample_changes.append((sample_index, sample_bytes))
+                    continue
+                sample_b64 = row.get(f'SampleImage{sample_index}Base64', '') or ''
                 if sample_b64:
                     sample_image = _base64_to_image(sample_b64)
                     if sample_image:
@@ -148,10 +164,10 @@ def render_edit_page():
                         st.warning(f"客戶樣品照 {sample_index} 無法顯示")
                 else:
                     st.info(f"尚未留存客戶樣品照 {sample_index}")
-        if row.get("SampleDescription"):
-            st.markdown(f"**樣品說明：**  {row['SampleDescription']}")
-        else:
-            st.caption("未填寫樣品說明")
+        sample_description = st.text_area(
+            '樣品說明', value=row.get('SampleDescription', '') or '',
+            key=f'edit_sample_description_{board_id}', height=100,
+        )
 
     # =========================
     # 配方資料
@@ -210,7 +226,7 @@ def render_edit_page():
     # =========================
     # 儲存
     # =========================
-    if st.button("儲存更新", disabled=photo_source is not None and edited_photo is None):
+    if st.button("儲存更新", disabled=(photo_source is not None and edited_photo is None) or invalid_sample):
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         try:
             updates = {
@@ -229,6 +245,19 @@ def render_edit_page():
                 updates["ImagePath"] = image_path
                 updates["ImageBase64"] = image_base64
                 updates["EmbeddingStatus"] = "PROCESSING"
+
+            for sample_index, sample_bytes in sample_changes:
+                sample_path = build_sample_image_path(
+                    row.get('Material', ''), board_id, sample_index, '.png',
+                )
+                sample_path, sample_base64 = write_uploaded_bytes_get_base64(sample_bytes, sample_path)
+                sample_local_path = resolve_local_image_path(sample_path)
+                if not sample_local_path.is_file() or sample_local_path.stat().st_size == 0:
+                    raise ValueError(f'客戶樣品照 {sample_index} 寫入失敗')
+                updates[f'SampleImage{sample_index}Path'] = sample_path
+                updates[f'SampleImage{sample_index}Base64'] = sample_base64
+            if sample_description != (row.get('SampleDescription', '') or ''):
+                updates['SampleDescription'] = sample_description
 
             update_color_match_board(board_id, updates)
 

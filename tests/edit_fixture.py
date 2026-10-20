@@ -26,6 +26,9 @@ if 'test_edit_initialized' not in st.session_state:
         'ID': 'PP_TEST', 'Material': 'PP', 'FormulaID': '', 'RecipeStatus': 'OFFICIAL',
         'ImagePath': 'PP/PP_TEST.jpg', 'ImageBase64': base64.b64encode(stream.getvalue()).decode(),
         'Customer': 'Original customer',
+        'SampleImage1Path': 'PP/PP_TEST_sample1.jpg',
+        'SampleImage1Base64': base64.b64encode(stream.getvalue()).decode(),
+        'SampleImage2Base64': '', 'SampleDescription': 'Original sample description',
     }
     st.session_state.test_updates = []
 
@@ -77,6 +80,15 @@ def installed_adapters():
             else:
                 sys.modules[name] = value
 
-with installed_adapters(), patch.object(st, 'file_uploader', lambda *args, **kwargs: None):
+def uploaded(*args, **kwargs):
+    upload_key = kwargs.get('key', '')
+    for index, content in st.session_state.get('test_sample_uploads', {}).items():
+        if upload_key == f'edit_sample_upload_PP_TEST_{index}':
+            result = BytesIO(content)
+            result.name = 'sample.png'
+            return result
+    return None
+
+with installed_adapters(), patch.object(st, 'file_uploader', uploaded):
     spec.loader.exec_module(page)
     page.render_edit_page()

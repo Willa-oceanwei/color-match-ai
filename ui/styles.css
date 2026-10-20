@@ -125,3 +125,22 @@ hr { border-color: var(--line) !important; margin: 22px 0 !important; }
     [data-testid="stTabs"] [role="tablist"] { gap: 18px; overflow-x: auto; }
     [data-testid="stFileUploaderDropzone"] { padding: 16px; }
 }
+
+/* Photo controls keep one row on phones without affecting form columns. */
+[class*="st-key-photo_tools_"] [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+}
+[class*="st-key-photo_tools_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    width: auto !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+}
+[class*="st-key-photo_tools_"] button {
+    padding: 6px 2px;
+    width: 100%;
+}
+[class*="st-key-photo_tools_"] button p {
+    font-size: clamp(10px, 2.8vw, 14px);
+    white-space: nowrap;
+}

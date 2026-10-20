@@ -60,6 +60,19 @@ class ImageTransformsTests(unittest.TestCase):
         with self.assertRaises(OSError):
             transform_photo(b'not a photo')
 
+    def test_crop_keeps_only_selected_pixels(self):
+        self.assert_pixels(transform_photo(source_bytes(), crop=(1/3, 0, 1, 1)),
+                           [1,2,4,5], (2,2))
+
+    def test_crop_uses_rotated_dimensions(self):
+        self.assert_pixels(transform_photo(source_bytes(), 1, crop=(0, 0, 0.5, 1)),
+                           [3,4,5], (1,3))
+
+    def test_empty_and_out_of_bounds_crops_are_rejected(self):
+        for crop in [(0.5,0,0.5,1), (-0.1,0,1,1), (0,0,1.1,1), (0,0,0.01,0.01)]:
+            with self.subTest(crop=crop), self.assertRaises(ValueError):
+                transform_photo(source_bytes(), crop=crop)
+
 
 if __name__ == '__main__':
     unittest.main()

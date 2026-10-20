@@ -1,0 +1,59 @@
+import base64
+from io import BytesIO
+from pathlib import Path
+import unittest
+
+from PIL import Image
+from streamlit.testing.v1 import AppTest
+
+
+KEY = 'edit_board_photo_PP_TEST'
+
+
+class EditPhotoTests(unittest.TestCase):
+    def app(self):
+        return AppTest.from_file(str(Path(__file__).with_name('edit_fixture.py')),
+                                 default_timeout=15).run()
+
+    def save(self, app):
+        next(button for button in app.button if button.label == '儲存更新').click().run()
+
+    def test_existing_photo_can_rotate_and_crop_without_reupload(self):
+        app = self.app()
+        app.button(key=f'{KEY}_right').click().run()
+        app.checkbox(key=f'{KEY}_crop_enabled').check().run()
+        app.slider(key=f'{KEY}_crop_x').set_value((0,50)).run()
+        self.assertEqual(len(app.exception), 0)
+        self.save(app)
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(len(app.error), 0)
+        updates = app.session_state['test_updates']
+        self.assertEqual(updates[0]['ImagePath'], 'PP/PP_TEST.png')
+        photo = base64.b64decode(updates[0]['ImageBase64'])
+        self.assertEqual(Image.open(BytesIO(photo)).size, (30,100))
+        self.assertEqual(photo, app.session_state['test_edit_embedding'])
+        self.assertEqual(updates[-1]['EmbeddingStatus'], 'Y')
+
+    def test_metadata_only_save_does_not_rewrite_image(self):
+        app = self.app()
+        self.save(app)
+        self.assertEqual(len(app.exception), 0)
+        self.assertNotIn('ImageBase64', app.session_state['test_updates'][0])
+        self.assertNotIn('test_edit_embedding', app.session_state)
+        self.assertNotIn('test_photo_writes', app.session_state)
+
+    def test_invalid_crop_blocks_save_and_reset_restores_original(self):
+        app = self.app()
+        app.checkbox(key=f'{KEY}_crop_enabled').check().run()
+        app.slider(key=f'{KEY}_crop_x').set_value((50,50)).run()
+        self.assertEqual(len(app.exception), 0)
+        self.assertTrue(next(b for b in app.button if b.label == '儲存更新').disabled)
+        app.button(key=f'{KEY}_reset').click().run()
+        self.assertFalse(app.checkbox(key=f'{KEY}_crop_enabled').value)
+        self.save(app)
+        self.assertEqual(len(app.exception), 0)
+        self.assertNotIn('ImageBase64', app.session_state['test_updates'][0])
+
+
+if __name__ == '__main__':
+    unittest.main()

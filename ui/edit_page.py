@@ -14,6 +14,8 @@ import base64
 import io
 from PIL import Image
 from ui.design import render_page_header
+from ui.photo_editor import render_photo_editor, photo_is_modified
+from services.id_utils import build_image_path
 
 
 def _base64_to_image(b64: str):
@@ -80,15 +82,6 @@ def render_edit_page():
     st.success(f"已載入：{board_id}")
 
     # =========================
-    # 現有圖片
-    # =========================
-    b64 = row.get("ImageBase64", "")
-    if b64:
-        img = _base64_to_image(b64)
-        if img:
-            st.image(img, width=200, caption="色板照片")
-
-    # =========================
     # 編輯基本資料
     # =========================
     st.markdown("### 基本資料")
@@ -113,7 +106,26 @@ def render_edit_page():
     with col5:
         remark = st.text_input("Remark", value=row.get("Remark", ""), key="edit_remark")
     with col6:
-        new_image = st.file_uploader("更換色板照片（選填）", type=["jpg", "jpeg", "png"], key="edit_image")
+        new_image = st.file_uploader("更換色板照片（選填）", type=["jpg", "jpeg", "png"],
+                                     key=f"edit_image_{board_id}")
+
+    st.markdown('### 調整色板照片')
+    photo_key = f'edit_board_photo_{board_id}'
+    photo_source = new_image
+    if photo_source is None:
+        try:
+            if row.get('ImageBase64'):
+                photo_source = io.BytesIO(base64.b64decode(row['ImageBase64']))
+            elif row.get('ImagePath'):
+                local_photo = resolve_local_image_path(row['ImagePath'])
+                if local_photo.is_file():
+                    photo_source = io.BytesIO(local_photo.read_bytes())
+        except (ValueError, OSError) as error:
+            st.warning(f'無法載入現有照片，請上傳新照片：{error}')
+    if photo_source is None:
+        st.info('目前沒有可編輯的照片，可先上傳更換色板照片。')
+    edited_photo = render_photo_editor(photo_source, key=photo_key, allow_crop=True)
+    image_changed = new_image is not None or photo_is_modified(photo_key)
 
     # =========================
     # 客戶樣品留存
@@ -198,7 +210,7 @@ def render_edit_page():
     # =========================
     # 儲存
     # =========================
-    if st.button("儲存更新"):
+    if st.button("儲存更新", disabled=photo_source is not None and edited_photo is None):
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         try:
             updates = {
@@ -211,10 +223,10 @@ def render_edit_page():
             }
 
             # 更換圖片
-            if new_image:
-                content = new_image.getvalue()
-                image_path = row.get("ImagePath", "")
-                _, image_base64 = write_uploaded_bytes_get_base64(content, image_path)
+            if image_changed:
+                image_path = build_image_path(row.get('Material', ''), board_id, '.png')
+                image_path, image_base64 = write_uploaded_bytes_get_base64(edited_photo, image_path)
+                updates["ImagePath"] = image_path
                 updates["ImageBase64"] = image_base64
                 updates["EmbeddingStatus"] = "PROCESSING"
 
@@ -249,14 +261,14 @@ def render_edit_page():
                 append_formula_row(formula_row)
 
             # 重建向量（圖片更換時）
-            if new_image:
-                local_path = resolve_local_image_path(row.get("ImagePath", ""))
+            if image_changed:
+                local_path = resolve_local_image_path(updates['ImagePath'])
                 embedding = embed_image(local_path)
                 upsert_embedding(
                     row.get("Material", ""),
                     {
                         "id": board_id,
-                        "image_path": row.get("ImagePath", ""),
+                        "image_path": updates['ImagePath'],
                         "formula_id": formula_id,
                         "recipe_status": recipe_status,
                     },

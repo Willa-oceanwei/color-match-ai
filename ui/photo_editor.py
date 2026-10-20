@@ -8,15 +8,38 @@ from services.image_transforms import transform_photo
 
 def _reset_crop(key):
     st.session_state[f'{key}_crop_enabled'] = False
-    st.session_state[f'{key}_crop_x'] = (0, 100)
-    st.session_state[f'{key}_crop_y'] = (0, 100)
+    for edge in ('top', 'sides', 'left', 'right', 'bottom'):
+        st.session_state[f'{key}_crop_{edge}'] = 0
+    st.session_state[f'{key}_crop_advanced'] = False
+
+
+def _crop_box(key):
+    if not st.session_state.get(f'{key}_crop_enabled', False):
+        return None
+    top = st.session_state.get(f'{key}_crop_top', 0)
+    sides = st.session_state.get(f'{key}_crop_sides', 0)
+    if st.session_state.get(f'{key}_crop_advanced', False):
+        left = st.session_state.get(f'{key}_crop_left', sides)
+        right = st.session_state.get(f'{key}_crop_right', sides)
+        bottom = st.session_state.get(f'{key}_crop_bottom', 0)
+    else:
+        left = right = sides
+        bottom = 0
+    return (left / 100, top / 100, 1 - right / 100, 1 - bottom / 100)
+
+
+def _enable_advanced_crop(key):
+    if st.session_state.get(f'{key}_crop_advanced', False):
+        sides = st.session_state.get(f'{key}_crop_sides', 0)
+        st.session_state[f'{key}_crop_left'] = sides
+        st.session_state[f'{key}_crop_right'] = sides
+        st.session_state[f'{key}_crop_bottom'] = 0
 
 
 def photo_is_modified(key):
     state = st.session_state.get(f'{key}_orientation', {})
-    cropped = (st.session_state.get(f'{key}_crop_enabled', False)
-               and (st.session_state.get(f'{key}_crop_x', (0, 100)) != (0, 100)
-                    or st.session_state.get(f'{key}_crop_y', (0, 100)) != (0, 100)))
+    crop = _crop_box(key)
+    cropped = crop is not None and crop != (0, 0, 1, 1)
     return bool(state.get('turns', 0) or state.get('mirror', False) or cropped)
 
 
@@ -60,10 +83,18 @@ def render_photo_editor(uploaded, *, key, allow_crop=False):
 
     crop = None
     if allow_crop and st.checkbox('裁切照片', key=f'{key}_crop_enabled'):
-        st.caption('拖動左右、上下範圍滑桿，保留需要的色板區域；預覽會即時更新。')
-        left, right = st.slider('左右保留範圍（%）', 0, 100, (0, 100), key=f'{key}_crop_x')
-        top, bottom = st.slider('上下保留範圍（%）', 0, 100, (0, 100), key=f'{key}_crop_y')
-        crop = (left / 100, top / 100, right / 100, bottom / 100)
+        st.caption('滑桿數字代表要裁掉的比例，0% 表示不裁；預覽會即時更新。')
+        st.slider('裁上方（%）', 0, 95, key=f'{key}_crop_top')
+        advanced = st.session_state.get(f'{key}_crop_advanced', False)
+        st.slider('裁左右（每側 %）', 0, 45, key=f'{key}_crop_sides', disabled=advanced,
+                  help='例如 10% 代表左邊、右邊各裁掉照片寬度的 10%。')
+        with st.expander('進階設定：左右分開／裁下方'):
+            if st.checkbox('左右分開裁切／裁下方', key=f'{key}_crop_advanced',
+                           on_change=_enable_advanced_crop, args=(key,)):
+                st.slider('裁左方（%）', 0, 95, key=f'{key}_crop_left')
+                st.slider('裁右方（%）', 0, 95, key=f'{key}_crop_right')
+                st.slider('裁下方（%）', 0, 95, key=f'{key}_crop_bottom')
+        crop = _crop_box(key)
     try:
         edited = transform_photo(content, state['turns'], state['mirror'], crop)
     except (OSError, ValueError) as error:

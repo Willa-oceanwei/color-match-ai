@@ -171,7 +171,7 @@ def render_upload_page():
         help="必填；此照片會用於建立 AI embedding。",
     )
     st.caption("必填")
-    uploaded_bytes = render_photo_editor(uploaded, key='new_board_photo')
+    uploaded_bytes = render_photo_editor(uploaded, key='new_board_photo', allow_crop=True)
 
     with st.expander("客戶樣品留存（選填）", expanded=False):
         sample_col_1, sample_col_2 = st.columns(2)
@@ -181,14 +181,14 @@ def render_upload_page():
                 type=["jpg", "jpeg", "png"],
                 help="選填；僅供歷史留存及人工核對。",
             )
-            sample_bytes_1 = render_photo_editor(sample_image_1, key='new_sample_1')
+            sample_bytes_1 = render_photo_editor(sample_image_1, key='new_sample_1', allow_crop=True)
         with sample_col_2:
             sample_image_2 = st.file_uploader(
                 "客戶樣品照 2",
                 type=["jpg", "jpeg", "png"],
                 help="選填；僅供歷史留存及人工核對。",
             )
-            sample_bytes_2 = render_photo_editor(sample_image_2, key='new_sample_2')
+            sample_bytes_2 = render_photo_editor(sample_image_2, key='new_sample_2', allow_crop=True)
 
         st.caption("樣品照用於保存客戶當時提供的實物依據，方便日後確認是否拿錯樣品。")
         sample_description = st.text_area(

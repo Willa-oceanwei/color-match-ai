@@ -1,12 +1,12 @@
 import streamlit as st
-from pathlib import Path
 from datetime import datetime
+import hashlib
 
 from config import SETTINGS
 
 from services.embedding_service import embed_image, upsert_embedding
 from services.formula_service import resolve_formula_mode
-from services.google_drive import write_uploaded_bytes, resolve_local_image_path
+from services.google_drive import resolve_local_image_path
 from services.turso_db import (
     append_color_match_board,
     get_color_match_board_by_id,
@@ -19,6 +19,7 @@ from services.id_utils import (
     normalize_material,
 )
 from ui.design import render_page_header
+from ui.photo_editor import render_photo_editor
 
 
 # =========================
@@ -27,8 +28,8 @@ from ui.design import render_page_header
 _embedding_cache = {}
 
 
-def get_cached_embedding(material, path, fn):
-    key = f"{material}:{path}"
+def get_cached_embedding(material, path, fn, image_bytes):
+    key = f"{material}:{path}:{hashlib.sha256(image_bytes).hexdigest()}"
     if key in _embedding_cache:
         return _embedding_cache[key]
 
@@ -170,6 +171,7 @@ def render_upload_page():
         help="必填；此照片會用於建立 AI embedding。",
     )
     st.caption("必填")
+    uploaded_bytes = render_photo_editor(uploaded, key='new_board_photo')
 
     with st.expander("客戶樣品留存（選填）", expanded=False):
         sample_col_1, sample_col_2 = st.columns(2)
@@ -179,12 +181,14 @@ def render_upload_page():
                 type=["jpg", "jpeg", "png"],
                 help="選填；僅供歷史留存及人工核對。",
             )
+            sample_bytes_1 = render_photo_editor(sample_image_1, key='new_sample_1')
         with sample_col_2:
             sample_image_2 = st.file_uploader(
                 "客戶樣品照 2",
                 type=["jpg", "jpeg", "png"],
                 help="選填；僅供歷史留存及人工核對。",
             )
+            sample_bytes_2 = render_photo_editor(sample_image_2, key='new_sample_2')
 
         st.caption("樣品照用於保存客戶當時提供的實物依據，方便日後確認是否拿錯樣品。")
         sample_description = st.text_area(
@@ -219,7 +223,8 @@ def render_upload_page():
 
     recipe_status = recipe_status_map[recipe_status_label]
 
-    uploaded_bytes = uploaded.getvalue() if uploaded else None
+    invalid_sample = ((sample_image_1 is not None and sample_bytes_1 is None)
+                      or (sample_image_2 is not None and sample_bytes_2 is None))
 
     # =========================
     # ID
@@ -229,11 +234,7 @@ def render_upload_page():
         formula_id or None
     )
 
-    extension = (
-        Path(uploaded.name).suffix
-        if uploaded
-        else ".jpg"
-    )
+    extension = '.png'
 
     image_path = build_image_path(
         material,
@@ -252,7 +253,7 @@ def render_upload_page():
     # =========================
     if st.button(
         "儲存並建立向量",
-        disabled=uploaded is None
+        disabled=not uploaded_bytes or invalid_sample
     ):
 
         if not uploaded_bytes:
@@ -293,10 +294,10 @@ def render_upload_page():
                 raise ValueError("Image write failed")
 
             sample_values = {}
-            for sample_index, sample_upload in enumerate(
-                (sample_image_1, sample_image_2), start=1
+            for sample_index, sample_bytes in enumerate(
+                (sample_bytes_1, sample_bytes_2), start=1
             ):
-                if sample_upload is None:
+                if sample_bytes is None:
                     sample_values[f"SampleImage{sample_index}Path"] = ""
                     sample_values[f"SampleImage{sample_index}Base64"] = ""
                     continue
@@ -305,11 +306,11 @@ def render_upload_page():
                     material,
                     board_id,
                     sample_index,
-                    Path(sample_upload.name).suffix,
+                    '.png',
                 )
                 try:
                     sample_path, sample_base64 = write_uploaded_bytes_get_base64(
-                        sample_upload.getvalue(), sample_path
+                        sample_bytes, sample_path
                     )
                     sample_full_path = SETTINGS.local_drive_root / sample_path
                     if not sample_full_path.exists() or sample_full_path.stat().st_size == 0:
@@ -463,7 +464,8 @@ def render_upload_page():
             embedding = get_cached_embedding(
                 material,
                 image_path,
-                lambda: embed_image(local_path)
+                lambda: embed_image(local_path),
+                uploaded_bytes,
             )
 
             upsert_embedding(

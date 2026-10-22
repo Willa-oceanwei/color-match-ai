@@ -4,6 +4,10 @@ from difflib import SequenceMatcher
 from config import SETTINGS
 
 
+class DuplicateColorBoardError(ValueError):
+    """A board with this ID already exists; the insert did not create a board."""
+
+
 COLOR_MATCH_COLUMNS = (
     "ID",
     "Material",
@@ -131,57 +135,63 @@ def init_color_match_tables():
 def append_color_match_board(row: dict):
     conn = get_turso_client()
 
-    conn.execute(
-        """
-        INSERT INTO color_match_boards (
-            id,
-            material,
-            image_path,
-            formula_id,
-            formula_mode,
-            recipe_status,
-            embedding_status,
-            customer,
-            color_name,
-            pantone,
-            create_date,
-            last_update,
-            remark,
-            image_base64,
-            sample_image_1_path,
-            sample_image_1_base64,
-            sample_image_2_path,
-            sample_image_2_base64,
-            sample_description
+    try:
+        conn.execute(
+            """
+            INSERT INTO color_match_boards (
+                id,
+                material,
+                image_path,
+                formula_id,
+                formula_mode,
+                recipe_status,
+                embedding_status,
+                customer,
+                color_name,
+                pantone,
+                create_date,
+                last_update,
+                remark,
+                image_base64,
+                sample_image_1_path,
+                sample_image_1_base64,
+                sample_image_2_path,
+                sample_image_2_base64,
+                sample_description
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row.get("ID", ""),
+                row.get("Material", ""),
+                row.get("ImagePath", ""),
+                row.get("FormulaID", ""),
+                row.get("FormulaMode", ""),
+                row.get("RecipeStatus", ""),
+                row.get("EmbeddingStatus", ""),
+                row.get("Customer", ""),
+                row.get("ColorName", ""),
+                row.get("Pantone", ""),
+                row.get("CreateDate", ""),
+                row.get("LastUpdate", ""),
+                row.get("Remark", ""),
+                row.get("ImageBase64", ""),
+                row.get("SampleImage1Path", ""),
+                row.get("SampleImage1Base64", ""),
+                row.get("SampleImage2Path", ""),
+                row.get("SampleImage2Base64", ""),
+                row.get("SampleDescription", ""),
+            ),
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            row.get("ID", ""),
-            row.get("Material", ""),
-            row.get("ImagePath", ""),
-            row.get("FormulaID", ""),
-            row.get("FormulaMode", ""),
-            row.get("RecipeStatus", ""),
-            row.get("EmbeddingStatus", ""),
-            row.get("Customer", ""),
-            row.get("ColorName", ""),
-            row.get("Pantone", ""),
-            row.get("CreateDate", ""),
-            row.get("LastUpdate", ""),
-            row.get("Remark", ""),
-            row.get("ImageBase64", ""),
-            row.get("SampleImage1Path", ""),
-            row.get("SampleImage1Base64", ""),
-            row.get("SampleImage2Path", ""),
-            row.get("SampleImage2Base64", ""),
-            row.get("SampleDescription", ""),
-        ),
-    )
 
-    conn.commit()
-    conn.sync()
-    conn.close()
+        conn.commit()
+        conn.sync()
+    except Exception as error:
+        if "UNIQUE constraint failed: color_match_boards.id" in str(error):
+            raise DuplicateColorBoardError(row.get("ID", "")) from error
+        raise
+    finally:
+        conn.close()
 
 
 def import_color_match_boards(rows: list[dict]):

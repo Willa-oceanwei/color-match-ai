@@ -1,4 +1,5 @@
 from services import turso_db
+import pytest
 
 
 class FakeResult:
@@ -40,6 +41,50 @@ class FakeConnection:
 
     def commit(self):
         self.events.append("commit")
+
+
+@pytest.mark.parametrize("stage", ["execute", "sync"])
+def test_duplicate_insert_is_reported_and_connection_closed(monkeypatch, stage):
+    error = ValueError(
+        'Hrana: SQLite error: UNIQUE constraint failed: color_match_boards.id'
+    )
+
+    class DuplicateConnection(FakeConnection):
+        def execute(self, query, params=()):
+            if stage == "execute":
+                raise error
+            return super().execute(query, params)
+
+    connection = DuplicateConnection([], sync_error=error if stage == "sync" else None)
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    with pytest.raises(turso_db.DuplicateColorBoardError, match="PVC_A1504"):
+        turso_db.append_color_match_board({"ID": "PVC_A1504"})
+
+    assert connection.events[-1] == "close"
+    assert "UPDATE" not in connection.query
+    assert "REPLACE" not in connection.query
+
+
+def test_append_closes_connection_and_preserves_unrelated_errors(monkeypatch):
+    error = ValueError("connection unavailable")
+    connection = FakeConnection([], sync_error=error)
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    with pytest.raises(ValueError) as caught:
+        turso_db.append_color_match_board({"ID": "PVC_A1504"})
+
+    assert caught.value is error
+    assert connection.events[-1] == "close"
+
+
+def test_append_commits_and_closes_on_success(monkeypatch):
+    connection = FakeConnection([])
+    monkeypatch.setattr(turso_db, "get_turso_client", lambda: connection)
+
+    turso_db.append_color_match_board({"ID": "PVC_A1504"})
+
+    assert connection.events == ["execute", "commit", "sync", "close"]
 
 
 class SchemaConnection(FakeConnection):

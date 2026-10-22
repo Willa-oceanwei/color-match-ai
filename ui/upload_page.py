@@ -8,6 +8,7 @@ from services.embedding_service import embed_image, upsert_embedding
 from services.formula_service import resolve_formula_mode
 from services.google_drive import resolve_local_image_path
 from services.turso_db import (
+    DuplicateColorBoardError,
     append_color_match_board,
     get_color_match_board_by_id,
     update_color_match_embedding_status,
@@ -36,6 +37,14 @@ def get_cached_embedding(material, path, fn, image_bytes):
     emb = fn()
     _embedding_cache[key] = emb
     return emb
+
+
+def _show_existing_board(board_id):
+    st.warning(
+        f"色板 ID「{board_id}」已存在，未新增色板。"
+        "若要更新照片或資料，請至「色板管理 → 編輯色板」查詢此 ID；"
+        "若是不同色板，請確認材質與配方編號。"
+    )
 
 
 # =========================
@@ -266,8 +275,13 @@ def render_upload_page():
 
         now = datetime.now().strftime("%Y/%m/%d %H:%M")
         create_date = datetime.now().strftime("%Y/%m/%d")
+        board_created = False
 
         try:
+            # Check before writing images, which use the same stable board ID.
+            if get_color_match_board_by_id(board_id):
+                _show_existing_board(board_id)
+                return
 
             # =====================
             # STEP 1 IMAGE
@@ -349,6 +363,7 @@ def render_upload_page():
             }
 
             append_color_match_board(row)
+            board_created = True
 
             # Do not report a successful upload until the row can be read back.
             # This catches replica/write issues immediately instead of leaving the
@@ -505,6 +520,9 @@ def render_upload_page():
                 "last_uploaded_id"
             ] = board_id
 
+        except DuplicateColorBoardError:
+            _show_existing_board(board_id)
+
         except Exception as e:
 
             import traceback
@@ -517,14 +535,15 @@ def render_upload_page():
                 traceback.format_exc()
             )
 
-            try:
-                update_color_match_embedding_status(
-                    board_id,
-                    "FAILED",
-                    now
-                )
+            if board_created:
+                try:
+                    update_color_match_embedding_status(
+                        board_id,
+                        "FAILED",
+                        now
+                    )
 
-            except Exception as e2:
-                st.error(
-                    f"update status failed: {e2}"
-                )
+                except Exception as e2:
+                    st.error(
+                        f"update status failed: {e2}"
+                    )

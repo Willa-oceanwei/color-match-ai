@@ -20,6 +20,7 @@ from services.id_utils import (
     normalize_material,
 )
 from ui.design import render_page_header
+from ui.material_options import BOARD_MATERIAL_OPTIONS
 from ui.photo_editor import render_photo_editor
 
 
@@ -65,7 +66,7 @@ def render_upload_page():
     with col1:
         material = st.selectbox(
             "Material",
-            ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "surlyn", "OTHER"]
+            BOARD_MATERIAL_OPTIONS,
         )
 
     with col2:

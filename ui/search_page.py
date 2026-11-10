@@ -6,6 +6,7 @@ import streamlit as st
 from PIL import Image
 
 from ui.design import render_page_header
+from ui.material_options import MATERIAL_OPTIONS
 
 
 def _roi_controls(label, key):
@@ -27,7 +28,7 @@ def _render_search_workspace():
 
     render_page_header('COLOR MATCH', '相似色板搜尋',
                        '排除背景後比較色板顏色，色差越小越接近。')
-    material = st.selectbox('原料', ['ALL', 'PP', 'ABS', 'TPR', 'NY', 'PC', 'PE', 'PVC', 'PS'],
+    material = st.selectbox('原料', ('ALL', *MATERIAL_OPTIONS),
                             format_func=lambda v: '全部原料' if v == 'ALL' else v)
     uploaded = st.file_uploader('樣品照片', type=['jpg', 'png', 'jpeg'])
     with st.expander('進階設定', expanded=False):

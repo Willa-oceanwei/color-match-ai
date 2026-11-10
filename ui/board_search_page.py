@@ -7,6 +7,7 @@ from PIL import Image
 from services.formula_repository import lookup_formula_by_id
 from services import turso_db
 from ui.design import format_quantity, render_page_header
+from ui.material_options import BOARD_MATERIAL_OPTIONS
 
 
 def _base64_to_image(value: str):
@@ -155,7 +156,7 @@ def render_board_search_page():
     with second_row[1]:
         material = st.selectbox(
             "材質",
-            ["", "PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"],
+            ("", *BOARD_MATERIAL_OPTIONS),
             key="board_search_material",
         )
     with second_row[2]:

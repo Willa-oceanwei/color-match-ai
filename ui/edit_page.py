@@ -15,7 +15,8 @@ import io
 from PIL import Image
 from ui.design import render_page_header
 from ui.photo_editor import render_photo_editor, photo_is_modified
-from services.id_utils import build_image_path, build_sample_image_path
+from services.id_utils import build_image_path, build_sample_image_path, normalize_material
+from ui.material_options import BOARD_MATERIAL_OPTIONS
 
 
 def _base64_to_image(b64: str):
@@ -79,19 +80,38 @@ def render_edit_page():
 
     row = st.session_state["edit_target"]
     board_id = row["ID"]
+    field_key = f"edit_{board_id}"
     st.success(f"已載入：{board_id}")
 
     # =========================
     # 編輯基本資料
     # =========================
     st.markdown("### 基本資料")
-    col1, col2, col3 = st.columns(3)
+    saved_material = row.get("Material") or ""
+    options = list(BOARD_MATERIAL_OPTIONS)
+    current_material = next(
+        (option for option in options if normalize_material(option) == normalize_material(saved_material)),
+        saved_material,
+    )
+    if current_material not in options:
+        options.append(current_material)
+
+    material_col, col1, col2, col3 = st.columns(4)
+    with material_col:
+        material = st.selectbox(
+            "Material", options, index=options.index(current_material),
+            format_func=lambda option: option or "未設定",
+            key=f"edit_material_{board_id}",
+            help="更新材質分類，保留原色板編號。",
+        )
+    material_changed = material != current_material
+    photo_material = normalize_material(material) if material_changed else saved_material
     with col1:
-        customer = st.text_input("Customer", value=row.get("Customer", ""), key="edit_customer")
+        customer = st.text_input("Customer", value=row.get("Customer", ""), key=f"{field_key}_customer")
     with col2:
-        color_name = st.text_input("ColorName", value=row.get("ColorName", ""), key="edit_color_name")
+        color_name = st.text_input("ColorName", value=row.get("ColorName", ""), key=f"{field_key}_color_name")
     with col3:
-        pantone = st.text_input("Pantone", value=row.get("Pantone", ""), key="edit_pantone")
+        pantone = st.text_input("Pantone", value=row.get("Pantone", ""), key=f"{field_key}_pantone")
 
     col4, col5, col6 = st.columns(3)
     with col4:
@@ -101,10 +121,10 @@ def render_edit_page():
             index=["OFFICIAL", "REFERENCE", "TRIAL", "FAILED"].index(
                 row.get("RecipeStatus", "OFFICIAL")
             ),
-            key="edit_recipe_status"
+            key=f"{field_key}_recipe_status"
         )
     with col5:
-        remark = st.text_input("Remark", value=row.get("Remark", ""), key="edit_remark")
+        remark = st.text_input("Remark", value=row.get("Remark", ""), key=f"{field_key}_remark")
     with col6:
         new_image = st.file_uploader("更換色板照片（選填）", type=["jpg", "jpeg", "png"],
                                      key=f"edit_image_{board_id}")
@@ -179,17 +199,19 @@ def render_edit_page():
             existing_formula = []
             st.warning("色板已載入，但目前無法從配方表載入色粉明細。")
         f = existing_formula[0] if existing_formula else {}
+        original_add_ratio = float(f.get("AddRatio") or 0)
+        original_net_weight = float(f.get("NetWeight") or 0)
 
         col_a, col_b, col_c = st.columns(3)
         with col_a:
-            add_ratio = st.number_input("添加比例 (g/kg)", value=float(f.get("AddRatio") or 0), step=0.1, format="%.1f", key="edit_add_ratio")
+            add_ratio = st.number_input("添加比例 (g/kg)", value=original_add_ratio, step=0.1, format="%.1f", key=f"{field_key}_add_ratio")
         with col_b:
-            net_weight = st.number_input("淨重 (g)", value=float(f.get("NetWeight") or 0), step=0.1, format="%.1f", key="edit_net_weight")
+            net_weight = st.number_input("淨重 (g)", value=original_net_weight, step=0.1, format="%.1f", key=f"{field_key}_net_weight")
         with col_c:
             total_type_options = ["", "LA", "MA", "S", "CA", "T9", "其他"]
             total_type_val = f.get("TotalType", "")
             total_type_idx = total_type_options.index(total_type_val) if total_type_val in total_type_options else 0
-            total_type = st.selectbox("合計類別", total_type_options, index=total_type_idx, key="edit_total_type")
+            total_type = st.selectbox("合計類別", total_type_options, index=total_type_idx, key=f"{field_key}_total_type")
 
         st.markdown("**色粉資料**")
         pigments = []
@@ -198,30 +220,30 @@ def render_edit_page():
         cols_p = st.columns(4)
         for i in range(4):
             with cols_p[i]:
-                p = st.text_input(f"色粉編號 {i+1}", value=str(f.get(f"Pigment{i+1}") or ""), key=f"edit_pigment_{i+1}")
+                p = st.text_input(f"色粉編號 {i+1}", value=str(f.get(f"Pigment{i+1}") or ""), key=f"{field_key}_pigment_{i+1}")
                 pigments.append(p)
 
         cols_w = st.columns(4)
         for i in range(4):
             with cols_w[i]:
-                w = st.number_input(f"重量 {i+1} (g)", value=float(f.get(f"Weight{i+1}") or 0), step=0.01, format="%.2f", key=f"edit_weight_{i+1}")
+                w = st.number_input(f"重量 {i+1} (g)", value=float(f.get(f"Weight{i+1}") or 0), step=0.01, format="%.2f", key=f"{field_key}_weight_{i+1}")
                 weights.append(w)
 
         cols_p2 = st.columns(4)
         for i in range(4, 8):
             with cols_p2[i-4]:
-                p = st.text_input(f"色粉編號 {i+1}", value=str(f.get(f"Pigment{i+1}") or ""), key=f"edit_pigment_{i+1}")
+                p = st.text_input(f"色粉編號 {i+1}", value=str(f.get(f"Pigment{i+1}") or ""), key=f"{field_key}_pigment_{i+1}")
                 pigments.append(p)
 
         cols_w2 = st.columns(4)
         for i in range(4, 8):
             with cols_w2[i-4]:
-                w = st.number_input(f"重量 {i+1} (g)", value=float(f.get(f"Weight{i+1}") or 0), step=0.01, format="%.2f", key=f"edit_weight_{i+1}")
+                w = st.number_input(f"重量 {i+1} (g)", value=float(f.get(f"Weight{i+1}") or 0), step=0.01, format="%.2f", key=f"{field_key}_weight_{i+1}")
                 weights.append(w)
 
         col_r1, _ = st.columns(2)
         with col_r1:
-            formula_remark = st.text_input("配方備註", value=f.get("Remark", ""), key="edit_formula_remark")
+            formula_remark = st.text_input("配方備註", value=f.get("Remark", ""), key=f"{field_key}_formula_remark")
 
     # =========================
     # 儲存
@@ -238,9 +260,12 @@ def render_edit_page():
                 "LastUpdate": now,
             }
 
+            if material_changed:
+                updates["Material"] = photo_material
+
             # 更換圖片
             if image_changed:
-                image_path = build_image_path(row.get('Material', ''), board_id, '.png')
+                image_path = build_image_path(photo_material, board_id, '.png')
                 image_path, image_base64 = write_uploaded_bytes_get_base64(edited_photo, image_path)
                 updates["ImagePath"] = image_path
                 updates["ImageBase64"] = image_base64
@@ -248,7 +273,7 @@ def render_edit_page():
 
             for sample_index, sample_bytes in sample_changes:
                 sample_path = build_sample_image_path(
-                    row.get('Material', ''), board_id, sample_index, '.png',
+                    photo_material, board_id, sample_index, '.png',
                 )
                 sample_path, sample_base64 = write_uploaded_bytes_get_base64(sample_bytes, sample_path)
                 sample_local_path = resolve_local_image_path(sample_path)
@@ -261,10 +286,21 @@ def render_edit_page():
 
             update_color_match_board(board_id, updates)
 
-            # 配方
+            # 更新材質時，只有配方或其基本資料有變更才寫入配方表。
             has_formula = any(p.strip() for p in pigments)
             formula_id = str(row.get("FormulaID", "")).strip()
-            if has_formula and formula_id:
+            if has_formula and formula_id and (
+                not material_changed
+                or (customer, color_name, pantone) != (
+                    row.get("Customer", ""), row.get("ColorName", ""), row.get("Pantone", "")
+                )
+                or add_ratio != original_add_ratio
+                or net_weight != original_net_weight
+                or total_type != total_type_options[total_type_idx]
+                or formula_remark != f.get("Remark", "")
+                or pigments != [str(f.get(f"Pigment{i}") or "") for i in range(1, 9)]
+                or weights != [float(f.get(f"Weight{i}") or 0) for i in range(1, 9)]
+            ):
                 formula_row = {
                     "FormulaID": formula_id,
                     "ColorName": color_name,
@@ -294,7 +330,7 @@ def render_edit_page():
                 local_path = resolve_local_image_path(updates['ImagePath'])
                 embedding = embed_image(local_path)
                 upsert_embedding(
-                    row.get("Material", ""),
+                    photo_material,
                     {
                         "id": board_id,
                         "image_path": updates['ImagePath'],

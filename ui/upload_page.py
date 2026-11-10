@@ -65,7 +65,7 @@ def render_upload_page():
     with col1:
         material = st.selectbox(
             "Material",
-            ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "OTHER"]
+            ["PP", "ABS", "TPR", "NY", "PC", "PE", "PVC", "PS", "surlyn", "OTHER"]
         )
 
     with col2:
